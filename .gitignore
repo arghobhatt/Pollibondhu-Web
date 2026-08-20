@@ -1,0 +1,20 @@
+# Coverage & Testing Generated Artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Node & Frontend Build Artifacts
+node_modules/
+dist/
+build/
+.DS_Store
