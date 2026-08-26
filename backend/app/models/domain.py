@@ -2,6 +2,12 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 
+class ForecastItemDTO(BaseModel):
+    day: str
+    temperature_celsius: float
+    condition_bn: str
+    icon_symbol: str = "🌤️"
+
 class WeatherDataDTO(BaseModel):
     city: str
     temperature_celsius: float
@@ -10,6 +16,7 @@ class WeatherDataDTO(BaseModel):
     wind_speed: float
     cached: bool = False
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    forecast: List[ForecastItemDTO] = []
 
 class NotificationRequestDTO(BaseModel):
     recipient: str = Field(..., description="Phone number, email address, or user ID")

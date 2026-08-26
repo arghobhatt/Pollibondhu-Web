@@ -14,6 +14,20 @@ This project implements **five core software design patterns** in Python + FastA
 
 ---
 
+## ⚡ Quick Start (Single Command)
+
+To launch both the FastAPI backend server and React Vite frontend portal in one command:
+
+```bash
+./start.sh
+```
+
+- **Frontend Portal**: `http://localhost:3000`
+- **Backend API Service**: `http://localhost:8000`
+- **Interactive Swagger Docs**: `http://localhost:8000/docs`
+
+---
+
 # 📊 Viewing UML Diagrams
 
 The UML class diagrams in this documentation are written using **Mermaid**.

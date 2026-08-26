@@ -134,3 +134,30 @@ def test_read_root_success(client):
     data = response.json()
     assert data["status"] == "online"
     assert "design_patterns" in data
+
+def test_health_check_success(client):
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "online"
+    assert "database" in data
+    assert "timestamp" in data
+
+def test_dashboard_summary_success(client):
+    mock_weather_dto = WeatherDataDTO(
+        city="ঢাকা",
+        temperature_celsius=28.5,
+        humidity=72,
+        condition_bn="রোদ উজ্জ্বল",
+        wind_speed=10.0,
+        cached=False
+    )
+    with patch("app.api.dashboard.weather_facade.get_weather_forecast", new_callable=AsyncMock) as mock_weather:
+        mock_weather.return_value = mock_weather_dto
+        response = client.get("/api/dashboard?city=ঢাকা")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "weather" in data
+        assert "market_prices" in data
+        assert "assigned_officer" in data

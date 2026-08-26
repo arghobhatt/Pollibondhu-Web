@@ -12,6 +12,8 @@ venv/
 .venv/
 env/
 .env
+*.db
+*.sqlite
 
 # Node & Frontend Build Artifacts
 node_modules/

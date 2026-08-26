@@ -1,32 +1,60 @@
 import React, { useState, useEffect } from 'react';
+import AuthModal from './components/AuthModal';
+import CitizenPortal from './components/CitizenPortal';
+import AgriModule from './components/AgriModule';
+import WeatherModule from './components/WeatherModule';
+import ComplaintPortal from './components/ComplaintPortal';
+import UtilityModule from './components/UtilityModule';
+import TransportModule from './components/TransportModule';
+import EmergencyModule from './components/EmergencyModule';
+import CommunityModule from './components/CommunityModule';
+import OfficerDashboard from './components/OfficerDashboard';
 
 export default function App() {
-  // Pattern 1: Singleton Weather State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('pollibondhu_token') || '');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const [weatherCity, setWeatherCity] = useState('ঢাকা');
   const [weatherData, setWeatherData] = useState(null);
 
-  // Pattern 2: Factory Method Notification State
   const [notifChannel, setNotifChannel] = useState('sms');
   const [notifRecipient, setNotifRecipient] = useState('+8801812345678');
   const [notifMessage, setNotifMessage] = useState('আপনার কৃষি ঋণের আবেদনটি মঞ্জুর হয়েছে।');
   const [notifResponse, setNotifResponse] = useState(null);
 
-  // Pattern 3: Strategy Loan Calculation State
   const [loanPrincipal, setLoanPrincipal] = useState(100000);
   const [loanRate, setLoanRate] = useState(8.0);
   const [loanDuration, setLoanDuration] = useState(12);
   const [loanScheme, setLoanScheme] = useState('standard_emi');
   const [loanResult, setLoanResult] = useState(null);
 
-  // Pattern 4: Observer Application Status Change State
   const [appId, setAppId] = useState('APP-2026-8801');
   const [newStatus, setNewStatus] = useState('Approved');
   const [observerLogs, setObserverLogs] = useState([]);
 
-  // Pattern 5: Facade Dashboard Summary State
   const [dashboardData, setDashboardData] = useState(null);
 
-  // Fetch Weather (Singleton Endpoint)
+  const fetchCurrentUser = async (token) => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const user = await res.json();
+        setCurrentUser(user);
+        setNotifRecipient(user.phone_number);
+      } else {
+        localStorage.removeItem('pollibondhu_token');
+        setAuthToken('');
+        setCurrentUser(null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const fetchWeather = async () => {
     try {
       const res = await fetch(`/api/weather?city=${encodeURIComponent(weatherCity)}`);
@@ -37,7 +65,6 @@ export default function App() {
     }
   };
 
-  // Fetch Dashboard (Facade Endpoint)
   const fetchDashboard = async () => {
     try {
       const res = await fetch(`/api/dashboard?city=${encodeURIComponent(weatherCity)}`);
@@ -51,7 +78,30 @@ export default function App() {
   useEffect(() => {
     fetchWeather();
     fetchDashboard();
+    if (authToken) {
+      fetchCurrentUser(authToken);
+    }
   }, []);
+
+  const handleLogout = async () => {
+    if (authToken) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+      } catch (e) {}
+    }
+    localStorage.removeItem('pollibondhu_token');
+    setAuthToken('');
+    setCurrentUser(null);
+  };
+
+  const handleAuthSuccess = (user, token) => {
+    setCurrentUser(user);
+    setAuthToken(token);
+    setNotifRecipient(user.phone_number);
+  };
 
   // Handle Notification Dispatch (Factory Method Endpoint)
   const handleSendNotification = async (e) => {
@@ -119,16 +169,73 @@ export default function App() {
             <p>সমন্বিত গ্রামীণ সেবা ও কৃষি প্ল্যাটফর্ম (Integrated Service Platform)</p>
           </div>
         </div>
-        <div className="pattern-badges">
-          <span className="badge">1. Singleton</span>
-          <span className="badge">2. Factory Method</span>
-          <span className="badge">3. Strategy</span>
-          <span className="badge">4. Observer</span>
-          <span className="badge">5. Facade</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {currentUser ? (
+            <div className="user-badge-pill">
+              <span style={{ color: '#34d399', fontWeight: 'bold' }}>👤 {currentUser.full_name}</span>
+              <span className="pattern-tag">{currentUser.role.toUpperCase()}</span>
+              <button className="btn-secondary" onClick={handleLogout}>লগআউট</button>
+            </div>
+          ) : (
+            <button className="btn" style={{ width: 'auto', padding: '0.5rem 1.25rem' }} onClick={() => setIsAuthModalOpen(true)}>
+              প্রবেশ করুন / নিবন্ধন
+            </button>
+          )}
+
+          <div className="pattern-badges">
+            <span className="badge">1. Singleton</span>
+            <span className="badge">2. Factory Method</span>
+            <span className="badge">3. Strategy</span>
+            <span className="badge">4. Observer</span>
+            <span className="badge">5. Facade</span>
+          </div>
         </div>
       </header>
 
-      <div className="grid-layout">
+      <CitizenPortal
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <AgriModule
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <WeatherModule />
+
+      <ComplaintPortal
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <UtilityModule
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <TransportModule />
+
+      <EmergencyModule />
+
+      <CommunityModule
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <OfficerDashboard
+        currentUser={currentUser}
+        authToken={authToken}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <div className="grid-layout" style={{ marginTop: '2rem' }}>
         {/* PATTERN 5: FACADE PATTERN DEMO */}
         <div className="card col-12">
           <div className="card-header">
@@ -310,7 +417,7 @@ export default function App() {
           </form>
 
           <div style={{ marginTop: '1rem', fontSize: '0.75rem', maxHeight: '150px', overflowY: 'auto' }}>
-            <p style={{ color: var(--text-muted), marginBottom: '0.35rem' }}>অফসার্ভার ইভেন্ট লগ (Observer Broadcast Stream):</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '0.35rem' }}>অফসার্ভার ইভেন্ট লগ (Observer Broadcast Stream):</p>
             {observerLogs.map((log, index) => (
               <div key={index} style={{ background: 'rgba(15, 23, 42, 0.8)', padding: '0.4rem', borderRadius: '0.35rem', marginBottom: '0.35rem', borderLeft: '3px solid #34d399' }}>
                 <span style={{ color: '#94a3b8' }}>[{log.time}]</span> {log.text}
@@ -319,6 +426,12 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
