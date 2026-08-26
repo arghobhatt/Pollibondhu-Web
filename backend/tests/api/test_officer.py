@@ -1,26 +1,28 @@
 import pytest
 
 def get_test_token(client, phone, role="citizen"):
+    nid = f"1990{phone[-7:]}"
     reg_payload = {
         "full_name": "টেস্ট ব্যবহারকারী",
         "phone_number": phone,
+        "nid_number": nid,
         "password": "password123",
         "role": role
     }
-    reg_res = client.post("/api/auth/register", json=reg_payload)
+    client.post("/api/auth/register", json=reg_payload)
     login_res = client.post("/api/auth/login", json={"phone_number": phone, "password": "password123"})
     if login_res.status_code == 200:
         return login_res.json()["access_token"]
     raise RuntimeError(f"Authentication failed: {login_res.text}")
 
 def test_officer_access_control_forbidden_for_citizen(client):
-    token = get_test_token(client, "+8801799991111", "citizen")
+    token = get_test_token(client, "+8801799991199", "citizen")
     headers = {"Authorization": f"Bearer {token}"}
     res = client.get("/api/officer/stats", headers=headers)
     assert res.status_code == 403
 
 def test_officer_dashboard_flow_and_observer_trigger(client):
-    token = get_test_token(client, "+8801899992222", "officer")
+    token = get_test_token(client, "+8801899992288", "officer")
     headers = {"Authorization": f"Bearer {token}"}
 
     stats_res = client.get("/api/officer/stats", headers=headers)

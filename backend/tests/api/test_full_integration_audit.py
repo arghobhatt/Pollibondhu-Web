@@ -1,20 +1,8 @@
 import pytest
+from tests.conftest import get_unique_user_token
 
 def test_full_integration_audit_all_user_flows(client):
-    citizen_phone = "+8801711223344"
-    reg_citizen_payload = {
-        "full_name": "আব্দুর রহিম (কৃষক)",
-        "phone_number": citizen_phone,
-        "password": "password123",
-        "role": "citizen",
-        "district": "ঢাকা"
-    }
-    reg_res = client.post("/api/auth/register", json=reg_citizen_payload)
-    assert reg_res.status_code in [201, 400]
-
-    login_res = client.post("/api/auth/login", json={"phone_number": citizen_phone, "password": "password123"})
-    assert login_res.status_code == 200
-    citizen_token = login_res.json()["access_token"]
+    citizen_token, citizen_phone = get_unique_user_token(client, role="citizen")
     citizen_headers = {"Authorization": f"Bearer {citizen_token}"}
 
     stats_res = client.get("/api/citizens/stats", headers=citizen_headers)
@@ -97,19 +85,7 @@ def test_full_integration_audit_all_user_flows(client):
     loan_res = client.post("/api/agriculture/loans/apply", json=loan_apply_payload, headers=citizen_headers)
     assert loan_res.status_code == 201
 
-    officer_phone = "+8801811223344"
-    reg_officer_payload = {
-        "full_name": "মোঃ মাহমুদুল হাসান (কর্মকর্তা)",
-        "phone_number": officer_phone,
-        "password": "password123",
-        "role": "officer",
-        "district": "ঢাকা"
-    }
-    client.post("/api/auth/register", json=reg_officer_payload)
-
-    officer_login_res = client.post("/api/auth/login", json={"phone_number": officer_phone, "password": "password123"})
-    assert officer_login_res.status_code == 200
-    officer_token = officer_login_res.json()["access_token"]
+    officer_token, _ = get_unique_user_token(client, role="officer")
     officer_headers = {"Authorization": f"Bearer {officer_token}"}
 
     off_stats_res = client.get("/api/officer/stats", headers=officer_headers)

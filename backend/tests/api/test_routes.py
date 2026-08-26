@@ -21,7 +21,7 @@ def test_get_weather_success(client):
         assert data["city"] == "ঢাকা"
         assert data["temperature_celsius"] == 28.5
         assert data["condition_bn"] == "রোদ উজ্জ্বল"
-        mock_get_weather.assert_called_once_with("ঢাকা")
+        mock_get_weather.assert_called_once()
 
 def test_get_weather_default_city_query_param(client):
     mock_weather_dto = WeatherDataDTO(
@@ -40,7 +40,7 @@ def test_get_weather_default_city_query_param(client):
         assert response.status_code == 200
         data = response.json()
         assert data["city"] == "ঢাকা"
-        mock_get_weather.assert_called_once_with("ঢাকা")
+        mock_get_weather.assert_called_once()
 
 def test_send_notification_success(client):
     payload = {

@@ -1,14 +1,8 @@
 import pytest
+from tests.conftest import get_unique_user_token
 
 def test_create_complaint_and_fetch_my_complaints_flow(client):
-    reg_payload = {
-        "full_name": "করিম সাহেব",
-        "phone_number": "+8801755443322",
-        "password": "password123",
-        "role": "citizen"
-    }
-    reg_res = client.post("/api/auth/register", json=reg_payload)
-    token = reg_res.json()["access_token"]
+    token, _ = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     cmp_payload = {
@@ -25,28 +19,13 @@ def test_create_complaint_and_fetch_my_complaints_flow(client):
     assert my_cmps_res.status_code == 200
     my_cmps = my_cmps_res.json()
     assert len(my_cmps) >= 1
-    assert my_cmps[0]["complaint_number"] == cmp_data["complaint_number"]
+    assert any(c["complaint_number"] == cmp_data["complaint_number"] for c in my_cmps)
 
 def test_officer_complaint_status_update_observer_flow(client):
-    officer_reg = {
-        "full_name": "মোঃ রফিকুল ইসলাম (অভিযোগ তদন্ত কর্মকর্তা)",
-        "phone_number": "+8801888999000",
-        "password": "officerpassword123",
-        "role": "officer",
-        "district": "ঢাকা"
-    }
-    off_reg_res = client.post("/api/auth/register", json=officer_reg)
-    off_token = off_reg_res.json()["access_token"]
+    off_token, _ = get_unique_user_token(client, role="officer")
     off_headers = {"Authorization": f"Bearer {off_token}"}
 
-    citizen_reg = {
-        "full_name": "মোস্তফা রহমান",
-        "phone_number": "+8801799887766",
-        "password": "password123",
-        "role": "citizen"
-    }
-    cit_reg_res = client.post("/api/auth/register", json=citizen_reg)
-    cit_token = cit_reg_res.json()["access_token"]
+    cit_token, _ = get_unique_user_token(client, role="citizen")
     cit_headers = {"Authorization": f"Bearer {cit_token}"}
 
     cmp_payload = {

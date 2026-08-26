@@ -1,4 +1,5 @@
 import pytest
+from tests.conftest import get_unique_user_token
 
 def test_get_service_categories_success(client):
     response = client.get("/api/services/categories")
@@ -15,21 +16,14 @@ def test_get_service_detail_success(client):
     assert "কৃষি ঋণ" in data["name_bn"]
 
 def test_citizen_service_application_and_tracking_flow(client):
-    reg_payload = {
-        "full_name": "জামাল হোসেন",
-        "phone_number": "+8801777666555",
-        "password": "password123",
-        "role": "citizen"
-    }
-    reg_res = client.post("/api/auth/register", json=reg_payload)
-    token = reg_res.json()["access_token"]
+    token, phone = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     app_payload = {
         "service_type": "agri_loan",
         "sub_service_name": "কৃষি ঋণ ও কিস্তি সহায়তা",
         "applicant_name": "জামাল হোসেন",
-        "applicant_phone": "+8801777666555",
+        "applicant_phone": phone,
         "remarks": "আমন ধানের জন্য জরুরি ঋণ প্রয়োজন"
     }
     app_res = client.post("/api/applications", json=app_payload, headers=headers)
@@ -48,12 +42,7 @@ def test_citizen_service_application_and_tracking_flow(client):
     assert track_res.json()["application_number"] == app_data["application_number"]
 
 def test_save_and_unsave_service_flow(client):
-    login_payload = {
-        "phone_number": "+8801777666555",
-        "password": "password123"
-    }
-    login_res = client.post("/api/auth/login", json=login_payload)
-    token = login_res.json()["access_token"]
+    token, _ = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     save_res = client.post("/api/services/agri_loan/save", headers=headers)
@@ -69,12 +58,7 @@ def test_save_and_unsave_service_flow(client):
     assert unsave_res.status_code == 200
 
 def test_notifications_and_stats_flow(client):
-    login_payload = {
-        "phone_number": "+8801777666555",
-        "password": "password123"
-    }
-    login_res = client.post("/api/auth/login", json=login_payload)
-    token = login_res.json()["access_token"]
+    token, _ = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     notif_res = client.get("/api/notifications", headers=headers)

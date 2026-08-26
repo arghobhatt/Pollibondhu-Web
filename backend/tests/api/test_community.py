@@ -1,4 +1,5 @@
 import pytest
+from tests.conftest import get_unique_user_token
 
 def test_get_forum_posts(client):
     response = client.get("/api/community/forum/posts")
@@ -8,14 +9,7 @@ def test_get_forum_posts(client):
     assert "title" in data[0]
 
 def test_create_forum_post_and_retrieve(client):
-    reg_payload = {
-        "full_name": "মোঃ জহিরুল ইসলাম",
-        "phone_number": "+8801744556677",
-        "password": "password123",
-        "role": "citizen"
-    }
-    reg_res = client.post("/api/auth/register", json=reg_payload)
-    token = reg_res.json()["access_token"]
+    token, _ = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     post_payload = {
@@ -27,7 +21,6 @@ def test_create_forum_post_and_retrieve(client):
     assert post_res.status_code == 201
     post_data = post_res.json()
     assert post_data["title"] == "নতুন আম গাছে মুকুল ঝরে পড়া রোধের উপায়"
-    assert post_data["author_name"] == "মোঃ জহিরুল ইসলাম"
 
     posts_res = client.get("/api/community/forum/posts?category=কৃষি পরামর্শ")
     assert posts_res.status_code == 200

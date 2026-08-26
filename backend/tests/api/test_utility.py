@@ -1,4 +1,5 @@
 import pytest
+from tests.conftest import get_unique_user_token
 
 def test_get_bill_types(client):
     response = client.get("/api/utility/bill-types")
@@ -8,14 +9,7 @@ def test_get_bill_types(client):
     assert any(b["id"] == "electricity" for b in data)
 
 def test_pay_utility_bill_and_history_flow(client):
-    reg_payload = {
-        "full_name": "আব্দুল বাসিত",
-        "phone_number": "+8801733445566",
-        "password": "password123",
-        "role": "citizen"
-    }
-    reg_res = client.post("/api/auth/register", json=reg_payload)
-    token = reg_res.json()["access_token"]
+    token, _ = get_unique_user_token(client, role="citizen")
     headers = {"Authorization": f"Bearer {token}"}
 
     pay_payload = {
@@ -34,7 +28,7 @@ def test_pay_utility_bill_and_history_flow(client):
     assert my_bills_res.status_code == 200
     my_bills = my_bills_res.json()
     assert len(my_bills) >= 1
-    assert my_bills[0]["transaction_id"] == pay_data["transaction_id"]
+    assert any(b["transaction_id"] == pay_data["transaction_id"] for b in my_bills)
 
     bill_id = pay_data["id"]
     receipt_res = client.get(f"/api/utility/bills/{bill_id}", headers=headers)

@@ -24,4 +24,12 @@ class ApplicationEventPublisher:
                 sub_service_name=sub_service_name
             )
 
+    async def notify(self, application_number: str, new_status: str, user_phone: str, user_id: int) -> None:
+        await self.notify_status_change(
+            application_id=application_number,
+            applicant_phone=user_phone,
+            new_status=new_status,
+            sub_service_name="কৃষি সেবা"
+        )
+
 application_event_publisher = ApplicationEventPublisher()
