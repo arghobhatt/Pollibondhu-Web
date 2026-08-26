@@ -39,12 +39,16 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
-    applications = relationship("ServiceApplication", foreign_keys="ServiceApplication.user_id", back_populates="applicant")
+    applications = relationship("ServiceApplication", foreign_keys="ServiceApplication.user_id", back_populates="applicant", cascade="all, delete-orphan", passive_deletes=True)
     assigned_applications = relationship("ServiceApplication", foreign_keys="ServiceApplication.assigned_officer_id", back_populates="assigned_officer")
-    loans = relationship("LoanApplication", back_populates="user")
-    complaints = relationship("CitizenComplaint", foreign_keys="CitizenComplaint.user_id", back_populates="complainant")
+    loans = relationship("LoanApplication", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    complaints = relationship("CitizenComplaint", foreign_keys="CitizenComplaint.user_id", back_populates="complainant", cascade="all, delete-orphan", passive_deletes=True)
     assigned_complaints = relationship("CitizenComplaint", foreign_keys="CitizenComplaint.assigned_officer_id", back_populates="assigned_officer")
     reported_prices = relationship("CropMarketPrice", back_populates="reported_by")
+    saved_services = relationship("SavedService", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    utility_bills = relationship("UtilityBill", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    forum_posts = relationship("ForumPost", back_populates="author", cascade="all, delete-orphan", passive_deletes=True)
 
 class ServiceApplication(Base):
     __tablename__ = "service_applications"
@@ -65,8 +69,8 @@ class ServiceApplication(Base):
 
     applicant = relationship("User", foreign_keys=[user_id], back_populates="applications")
     assigned_officer = relationship("User", foreign_keys=[assigned_officer_id], back_populates="assigned_applications")
-    loan_details = relationship("LoanApplication", back_populates="service_application", uselist=False)
-    audit_logs = relationship("AuditLog", back_populates="service_application")
+    loan_details = relationship("LoanApplication", back_populates="service_application", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
+    audit_logs = relationship("AuditLog", back_populates="service_application", cascade="all, delete-orphan", passive_deletes=True)
 
 class LoanApplication(Base):
     __tablename__ = "loan_applications"
@@ -157,7 +161,7 @@ class SavedService(Base):
     service_name_bn = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    user = relationship("User", backref="saved_services")
+    user = relationship("User", back_populates="saved_services")
 
 class Notification(Base):
     __tablename__ = "notifications"
@@ -170,7 +174,7 @@ class Notification(Base):
     is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    user = relationship("User", backref="notifications")
+    user = relationship("User", back_populates="notifications")
 
 class CropDisease(Base):
     __tablename__ = "crop_diseases"
@@ -211,7 +215,7 @@ class UtilityBill(Base):
     paid_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    user = relationship("User", backref="utility_bills")
+    user = relationship("User", back_populates="utility_bills")
 
 class TransportRoute(Base):
     __tablename__ = "transport_routes"
@@ -238,7 +242,6 @@ class TransportSchedule(Base):
     arrival_time = Column(String(32), nullable=False)
     days_of_week = Column(String(100), default="দৈনিক (Daily)", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     route = relationship("TransportRoute", back_populates="schedules")
 
@@ -249,10 +252,10 @@ class EmergencyContact(Base):
     title_bn = Column(String(255), nullable=False)
     category = Column(String(100), nullable=False, index=True)
     phone_number = Column(String(32), nullable=False)
-    available_hours = Column(String(100), default="২৪/৭ (২৪ ঘণ্টা)", nullable=False)
-    district = Column(String(100), default="জাতীয়", nullable=False, index=True)
+    available_hours = Column(String(100), default="২৪/৭", nullable=False)
+    district = Column(String(100), default="জাতীয়", nullable=False)
     description_bn = Column(Text, nullable=False)
-    icon_symbol = Column(String(50), default="🚨", nullable=False)
+    icon_symbol = Column(String(50), default="📞", nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
 class ForumPost(Base):
@@ -262,21 +265,21 @@ class ForumPost(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     author_name = Column(String(255), nullable=False)
     title = Column(String(255), nullable=False)
-    category = Column(String(100), default="কৃষি পরামর্শ", nullable=False, index=True)
+    category = Column(String(100), nullable=False)
     content = Column(Text, nullable=False)
     views_count = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    author = relationship("User", backref="forum_posts")
+    author = relationship("User", back_populates="forum_posts")
 
 class TrainingCourse(Base):
     __tablename__ = "training_courses"
 
     id = Column(Integer, primary_key=True, index=True)
     title_bn = Column(String(255), nullable=False)
-    category = Column(String(100), nullable=False, index=True)
+    category = Column(String(100), nullable=False)
     instructor_bn = Column(String(255), nullable=False)
     duration_hours = Column(Integer, nullable=False)
-    video_url = Column(String(255), nullable=True)
+    video_url = Column(String(500), nullable=False)
     description_bn = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

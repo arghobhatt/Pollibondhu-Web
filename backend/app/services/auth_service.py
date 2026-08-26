@@ -112,6 +112,12 @@ class AuthService:
         return UserResponseDTO.model_validate(user)
 
     def delete_user_account(self, db: Session, user: User) -> dict:
+        for app_item in user.assigned_applications:
+            app_item.assigned_officer_id = None
+        for comp_item in user.assigned_complaints:
+            comp_item.assigned_officer_id = None
+        for price_item in user.reported_prices:
+            price_item.reported_by_id = None
         db.delete(user)
         db.commit()
         return {
