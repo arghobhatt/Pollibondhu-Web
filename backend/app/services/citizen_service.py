@@ -150,6 +150,7 @@ class CitizenService:
             applicant_name=req.applicant_name or user.full_name,
             applicant_phone=req.applicant_phone or user.phone_number,
             remarks=req.remarks or "নতুন আবেদন জমা হয়েছে",
+            attached_documents=req.attached_documents,
             assigned_officer_id=officer_id
         )
         db.add(new_app)
@@ -279,6 +280,7 @@ class CitizenService:
             applicant_name=app_rec.applicant_name,
             applicant_phone=app_rec.applicant_phone,
             remarks=app_rec.remarks,
+            attached_documents=app_rec.attached_documents,
             assigned_officer_id=app_rec.assigned_officer_id,
             assigned_officer_name=officer_name,
             created_at=app_rec.created_at,

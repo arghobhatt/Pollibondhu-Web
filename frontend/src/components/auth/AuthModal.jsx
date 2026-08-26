@@ -10,7 +10,7 @@ export default function AuthModal() {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [loginPhone, setLoginPhone] = useState('+8801812345678');
+  const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
   const [regFullName, setRegFullName] = useState('');
@@ -56,6 +56,12 @@ export default function AuthModal() {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+
+    if (!regNid || regNid.trim().length < 10) {
+      setErrorMessage('জাতীয় পরিচয়পত্র (NID) নম্বর আবশ্যক। নূন্যতম ১০ ডিজিটের NID প্রদান করুন।');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
@@ -65,7 +71,7 @@ export default function AuthModal() {
           full_name: regFullName,
           phone_number: regPhone,
           email: regEmail || null,
-          nid_number: regNid || null,
+          nid_number: regNid.trim(),
           password: regPassword,
           role: regRole,
           district: regDistrict
@@ -261,7 +267,7 @@ export default function AuthModal() {
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  পূর্ণ নাম
+                  পূর্ণ নাম *
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -278,7 +284,7 @@ export default function AuthModal() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  মোবাইল নম্বর
+                  মোবাইল নম্বর *
                 </label>
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -295,7 +301,7 @@ export default function AuthModal() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  জাতীয় পরিচয়পত্র নম্বর (NID)
+                  জাতীয় পরিচয়পত্র নম্বর (NID) *
                 </label>
                 <div className="relative">
                   <FileText className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -304,6 +310,7 @@ export default function AuthModal() {
                     value={regNid}
                     onChange={(e) => setRegNid(e.target.value)}
                     placeholder="1990123456789"
+                    required
                     className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
                   />
                 </div>
@@ -343,7 +350,7 @@ export default function AuthModal() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  পাসওয়ার্ড
+                  পাসওয়ার্ড *
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />

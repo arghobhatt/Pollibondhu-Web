@@ -16,7 +16,9 @@ import {
   Search, 
   CheckCircle2, 
   ShieldCheck,
-  FileText
+  FileText,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
 
@@ -29,7 +31,11 @@ export default function AgriPage() {
   const [diseaseSearch, setDiseaseSearch] = useState('');
 
   const [marketPrices, setMarketPrices] = useState([]);
+  const [selectedDivision, setSelectedDivision] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [cropCategorySearch, setCropCategorySearch] = useState('');
+  const [sortOrder, setSortOrder] = useState('none');
+
   const [newCropName, setNewCropName] = useState('');
   const [newCropNameBn, setNewCropNameBn] = useState('');
   const [newMarketName, setNewMarketName] = useState('');
@@ -84,6 +90,21 @@ export default function AgriPage() {
     e.preventDefault();
     fetchMarketPrices(selectedDistrict);
   };
+
+  const filteredMarketPrices = marketPrices
+    .filter((p) => {
+      if (selectedDivision && p.division && p.division !== selectedDivision) return false;
+      if (cropCategorySearch) {
+        const q = cropCategorySearch.toLowerCase();
+        return p.crop_name_bn.toLowerCase().includes(q) || p.crop_name.toLowerCase().includes(q);
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === 'asc') return a.price_bdt_per_mon - b.price_bdt_per_mon;
+      if (sortOrder === 'desc') return b.price_bdt_per_mon - a.price_bdt_per_mon;
+      return 0;
+    });
 
   const handleOfficerPriceSubmit = async (e) => {
     e.preventDefault();
@@ -188,7 +209,7 @@ export default function AgriPage() {
           </div>
           <h2 className="text-xl font-bold tracking-tight">কৃষি ও বাজার তথ্য কেন্দ্র</h2>
           <p className="text-xs text-emerald-100/90 leading-relaxed font-normal">
-            ফসলের রোগ নির্ণয়, অনুমোদিত চিকিৎসা, শস্য বাজারদর ও সহজ শর্তে কৃষি ঋণের ডিজিটাল হিসাব।
+            ২০+ ফসলের রোগ নির্ণয়, অনুমোদিত চিকিৎসা, ৮ বিভাগের শস্য বাজারদর ও সহজ শর্তে কৃষি ঋণের হিসাব।
           </p>
         </div>
       </div>
@@ -214,7 +235,7 @@ export default function AgriPage() {
           }`}
         >
           <TrendingUp className="w-4 h-4 text-emerald-600" />
-          <span>ফসলের বাজারদর</span>
+          <span>৮ বিভাগের বাজারদর</span>
         </button>
         <button
           onClick={() => setAgriTab('agri_loan')}
@@ -248,7 +269,7 @@ export default function AgriPage() {
                 <Input
                   value={diseaseSearch}
                   onChange={(e) => setDiseaseSearch(e.target.value)}
-                  placeholder="ফসলের নাম লিখুন (যেমন: ধান, আলু, গম...)"
+                  placeholder="ফসল বা রোগের নাম দিয়ে অনুসন্ধান করুন (যেমন: ধান, আলু, গম, ব্লাস্ট...)"
                 />
                 <button
                   type="submit"
@@ -316,28 +337,65 @@ export default function AgriPage() {
       {agriTab === 'market_prices' && (
         <div className="space-y-6">
           <Card>
-            <CardContent className="pt-6">
-              <form onSubmit={handleDistrictFilterSubmit} className="flex gap-2">
-                <Input
-                  value={selectedDistrict}
-                  onChange={(e) => setSelectedDistrict(e.target.value)}
-                  placeholder="জেলা দিয়ে ফিল্টার করুন (যেমন: ঢাকা, বগুড়া, পাবনা...)"
-                />
+            <CardContent className="pt-6 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <FormField label="বিভাগ নির্বাচন">
+                  <Select value={selectedDivision} onChange={(e) => setSelectedDivision(e.target.value)}>
+                    <option value="">সকল বিভাগ</option>
+                    <option value="ঢাকা">ঢাকা</option>
+                    <option value="চট্টগ্রাম">চট্টগ্রাম</option>
+                    <option value="সিলেট">সিলেট</option>
+                    <option value="রাজশাহী">রাজশাহী</option>
+                    <option value="রংপুর">রংপুর</option>
+                    <option value="খুলনা">খুলনা</option>
+                    <option value="বরিশাল">বরিশাল</option>
+                    <option value="ময়মনসিংহ">ময়মনসিংহ</option>
+                  </Select>
+                </FormField>
+
+                <FormField label="ফসল / শস্য অনুসন্ধান">
+                  <Input
+                    value={cropCategorySearch}
+                    onChange={(e) => setCropCategorySearch(e.target.value)}
+                    placeholder="ধান, আলু, রসুন, মরিচ..."
+                  />
+                </FormField>
+
+                <FormField label="জেলা ফিল্টার">
+                  <Input
+                    value={selectedDistrict}
+                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                    placeholder="জেলা লিখুন"
+                  />
+                </FormField>
+
+                <FormField label="মূল্য সাজান">
+                  <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                    <option value="none">ডিফল্ট</option>
+                    <option value="asc">কম থেকে বেশি</option>
+                    <option value="desc">বেশি থেকে কম</option>
+                  </Select>
+                </FormField>
+              </div>
+
+              <div className="flex justify-end">
                 <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                  onClick={handleDistrictFilterSubmit}
+                  type="button"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg shadow-sm flex items-center gap-1.5"
                 >
                   <Search className="w-3.5 h-3.5" />
-                  <span>ফিল্টার</span>
+                  <span>অনুসন্ধান করুন</span>
                 </button>
-              </form>
+              </div>
             </CardContent>
           </Card>
 
-          <DataTable headers={["ফসলের নাম", "বাজার / হাট", "জেলা", "বাজারদর (প্রতি মন)", "আপডেটের সময়"]}>
-            {marketPrices.map((p) => (
+          <DataTable headers={["ফসল / পণ্য", "বিভাগ", "বাজার / হাট", "জেলা", "বাজারদর (প্রতি মন)", "সর্বশেষ আপডেট"]}>
+            {filteredMarketPrices.map((p) => (
               <DataTableRow key={p.id}>
                 <DataTableCell className="font-semibold text-slate-900">{p.crop_name_bn} ({p.crop_name})</DataTableCell>
+                <DataTableCell><span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">{p.division || 'ঢাকা'}</span></DataTableCell>
                 <DataTableCell>{p.market_name}</DataTableCell>
                 <DataTableCell>{p.district}</DataTableCell>
                 <DataTableCell className="font-bold text-emerald-700">{p.price_bdt_per_mon} ৳</DataTableCell>

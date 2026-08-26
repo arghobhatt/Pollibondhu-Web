@@ -7,19 +7,32 @@ from app.repositories.user_repository import user_repository
 
 class AuthService:
     def register_user(self, db: Session, req: UserRegisterDTO) -> TokenResponseDTO:
+        if not req.nid_number or len(req.nid_number.strip()) < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="জাতীয় পরিচয়পত্র (NID) নম্বর আবশ্যক। সঠিক NID নম্বর প্রদান করুন।"
+            )
+
         existing_user = user_repository.get_by_phone(db, req.phone_number)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this phone number is already registered."
+                detail="এই মোবাইল নম্বর দিয়ে ইতিমধ্যে অ্যাকাউন্ট নিবন্ধিত রয়েছে।"
             )
         
+        existing_nid = db.query(User).filter(User.nid_number == req.nid_number).first()
+        if existing_nid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="এই NID নম্বর দিয়ে ইতিমধ্যে একটি একাউন্ট নিবন্ধিত রয়েছে।"
+            )
+
         if req.email:
             existing_email = user_repository.get_by_email(db, req.email)
             if existing_email:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="A user with this email address is already registered."
+                    detail="এই ইমেইল ঠিকানাটি ইতিমধ্যে ব্যবহৃত হয়েছে।"
                 )
 
         role_enum = UserRole.CITIZEN
@@ -56,6 +69,7 @@ class AuthService:
             division=new_user.division,
             district=new_user.district,
             upazila=new_user.upazila,
+            avatar_url=new_user.avatar_url,
             is_active=new_user.is_active
         )
         return TokenResponseDTO(access_token=access_token, token_type="bearer", user=user_dto)
@@ -65,13 +79,13 @@ class AuthService:
         if not user or not verify_password(req.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid phone number or password."
+                detail="অবৈধ মোবাইল নম্বর অথবা পাসওয়ার্ড।"
             )
         
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is deactivated."
+                detail="আপনার একাউন্টটি নিষ্ক্রিয় করা হয়েছে।"
             )
 
         token_data = {"sub": str(user.id), "phone": user.phone_number, "role": user.role.value}
@@ -87,6 +101,7 @@ class AuthService:
             division=user.division,
             district=user.district,
             upazila=user.upazila,
+            avatar_url=user.avatar_url,
             is_active=user.is_active
         )
         return TokenResponseDTO(access_token=access_token, token_type="bearer", user=user_dto)
@@ -104,6 +119,8 @@ class AuthService:
             user.district = req.district
         if req.upazila is not None:
             user.upazila = req.upazila
+        if req.avatar_url is not None:
+            user.avatar_url = req.avatar_url
         db.commit()
         db.refresh(user)
         return UserResponseDTO.model_validate(user)
@@ -113,11 +130,11 @@ class AuthService:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User account with this phone number was not found."
+                detail="এই মোবাইল নম্বর দিয়ে কোন একাউন্ট পাওয়া যায়নি।"
             )
         return {
             "status": "success",
-            "message": f"Password recovery instructions sent via SMS to {req.phone_number}."
+            "message": f"পাসওয়ার্ড রিকভারি নির্দেশিকা SMS এর মাধ্যমে পাঠানো হয়েছে: {req.phone_number}"
         }
 
     def reset_password(self, db: Session, req: ResetPasswordDTO) -> dict:
@@ -125,20 +142,20 @@ class AuthService:
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="User account not found."
+                detail="অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।"
             )
         
         if user.nid_number and user.nid_number != req.nid_number:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Identity verification failed. NID number does not match registered records."
+                detail="পরিচয় যাচাইকরণ ব্যর্থ হয়েছে। NID নম্বর মিলেনি।"
             )
 
         user.password_hash = hash_password(req.new_password)
         db.commit()
         return {
             "status": "success",
-            "message": "Password reset successfully. You may now log in with your new password."
+            "message": "পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে। নতুন পাসওয়ার্ড দিয়ে প্রবেশ করুন।"
         }
 
 auth_service = AuthService()

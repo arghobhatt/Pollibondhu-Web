@@ -26,6 +26,7 @@ class ServiceApplicationCreateDTO(BaseModel):
     applicant_name: str = Field(..., min_length=2)
     applicant_phone: str = Field(..., min_length=11)
     remarks: Optional[str] = None
+    attached_documents: Optional[str] = None
 
 class AuditLogItemDTO(BaseModel):
     id: int
@@ -49,6 +50,7 @@ class ServiceApplicationResponseDTO(BaseModel):
     applicant_name: str
     applicant_phone: str
     remarks: Optional[str] = None
+    attached_documents: Optional[str] = None
     assigned_officer_id: Optional[int] = None
     assigned_officer_name: Optional[str] = None
     created_at: datetime

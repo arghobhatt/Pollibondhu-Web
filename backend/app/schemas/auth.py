@@ -5,7 +5,7 @@ class UserRegisterDTO(BaseModel):
     full_name: str = Field(..., min_length=2, description="Applicant full name")
     phone_number: str = Field(..., min_length=11, description="Mobile number e.g. +8801812345678")
     email: Optional[str] = None
-    nid_number: Optional[str] = None
+    nid_number: str = Field(..., min_length=10, description="National ID number (required)")
     password: str = Field(..., min_length=6, description="Password min 6 characters")
     division: Optional[str] = None
     district: Optional[str] = None
@@ -26,6 +26,7 @@ class UserResponseDTO(BaseModel):
     division: Optional[str] = None
     district: Optional[str] = None
     upazila: Optional[str] = None
+    avatar_url: Optional[str] = None
     is_active: bool
 
     class Config:
@@ -38,6 +39,7 @@ class UserProfileUpdateDTO(BaseModel):
     division: Optional[str] = None
     district: Optional[str] = None
     upazila: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class TokenResponseDTO(BaseModel):
     access_token: str
