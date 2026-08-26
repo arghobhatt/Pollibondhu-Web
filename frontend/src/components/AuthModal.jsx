@@ -8,12 +8,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [loginPhone, setLoginPhone] = useState('+8801812345678');
   const [loginPassword, setLoginPassword] = useState('');
 
+  const [regRole, setRegRole] = useState('citizen');
   const [regFullName, setRegFullName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regNid, setRegNid] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState('citizen');
   const [regDistrict, setRegDistrict] = useState('ঢাকা');
 
   const [resetPhone, setResetPhone] = useState('');
@@ -50,6 +50,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+    if (!regNid || regNid.trim().length < 10) {
+      setErrorMessage('জাতীয় পরিচয়পত্র (NID) নম্বর আবশ্যক। নূন্যতম ১০ ডিজিটের NID প্রদান করুন।');
+      return;
+    }
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -58,7 +62,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           full_name: regFullName,
           phone_number: regPhone,
           email: regEmail || null,
-          nid_number: regNid || null,
+          nid_number: regNid.trim(),
           password: regPassword,
           role: regRole,
           district: regDistrict
@@ -175,29 +179,35 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         {activeTab === 'register' && (
           <form onSubmit={handleRegister}>
             <div className="form-group">
-              <label>পূর্ণ নাম (Full Name)</label>
-              <input type="text" className="form-control" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} required placeholder="আব্দুল কুদ্দুস" />
-            </div>
-            <div className="form-group">
-              <label>মোবাইল নম্বর (Phone Number)</label>
-              <input type="text" className="form-control" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} required placeholder="+8801812345678" />
-            </div>
-            <div className="form-group">
-              <label>জাতীয় পরিচয়পত্র নম্বর (NID Number)</label>
-              <input type="text" className="form-control" value={regNid} onChange={(e) => setRegNid(e.target.value)} placeholder="1990123456789" />
-            </div>
-            <div className="form-group">
-              <label>ভূমিকা / রোল (Role)</label>
+              <label>নিবন্ধন একাউন্টের ধরন (Account Type) *</label>
               <select className="form-control" value={regRole} onChange={(e) => setRegRole(e.target.value)}>
                 <option value="citizen">কৃষক / নাগরিক (Citizen)</option>
                 <option value="officer">উপসহকারী কৃষি কর্মকর্তা (Officer)</option>
               </select>
             </div>
             <div className="form-group">
+              <label>{regRole === 'officer' ? 'কর্মকর্তার পূর্ণ নাম (Officer Name)' : 'পূর্ণ নাম (Full Name)'}</label>
+              <input type="text" className="form-control" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} required placeholder="আব্দুল কুদ্দুস" />
+            </div>
+            <div className="form-group">
+              <label>মোবাইল নম্বর (Phone Number)</label>
+              <input type="text" className="form-control" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} required placeholder="+8801812345678" />
+            </div>
+            {regRole === 'officer' && (
+              <div className="form-group">
+                <label>অফিসিয়াল ইমেইল ঠিকানা (Official Email)</label>
+                <input type="email" className="form-control" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} placeholder="officer@pollibondhu.gov.bd" />
+              </div>
+            )}
+            <div className="form-group">
+              <label>{regRole === 'officer' ? 'জাতীয় পরিচয়পত্র / কর্মকর্তা আইডি (NID)' : 'জাতীয় পরিচয়পত্র নম্বর (NID Number)'}</label>
+              <input type="text" className="form-control" value={regNid} onChange={(e) => setRegNid(e.target.value)} required placeholder="1990123456789" />
+            </div>
+            <div className="form-group">
               <label>পাসওয়ার্ড (Password)</label>
               <input type="password" className="form-control" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required placeholder="নূন্যতম ৬ অক্ষর" />
             </div>
-            <button type="submit" className="btn">নিবন্ধন সম্পন্ন করুন</button>
+            <button type="submit" className="btn">{regRole === 'officer' ? 'কর্মকর্তা নিবন্ধন সম্পন্ন করুন' : 'নিবন্ধন সম্পন্ন করুন'}</button>
           </form>
         )}
 

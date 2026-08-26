@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { X, LogIn, UserPlus, KeyRound, Phone, Lock, User, FileText, MapPin, Navigation, AlertCircle, CheckCircle2, Sprout } from 'lucide-react';
+import { X, LogIn, UserPlus, KeyRound, Phone, Lock, User, FileText, MapPin, Navigation, AlertCircle, CheckCircle2, Sprout, ShieldCheck, Mail, Building } from 'lucide-react';
 
 export default function AuthModal() {
   const { isAuthModalOpen, authModalTab, closeAuthModal, login } = useAuth();
@@ -13,12 +13,12 @@ export default function AuthModal() {
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  const [regRole, setRegRole] = useState('citizen');
   const [regFullName, setRegFullName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regNid, setRegNid] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState('citizen');
   const [regDivision, setRegDivision] = useState('ঢাকা');
   const [regDistrict, setRegDistrict] = useState('ঢাকা');
   const [regUpazila, setRegUpazila] = useState('ধামরাই');
@@ -195,7 +195,7 @@ export default function AuthModal() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">পল্লীবন্ধু অ্যাকাউন্ট প্রসেস</h3>
-              <p className="text-[11px] text-slate-500">নিরাপদ নাগরিক লগইন পোর্টাল</p>
+              <p className="text-[11px] text-slate-500">নিরাপদ নাগরিক ও কর্মকর্তা পোর্টাল</p>
             </div>
           </div>
           <button
@@ -305,9 +305,48 @@ export default function AuthModal() {
 
           {activeTab === 'register' && (
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  নিবন্ধন একাউন্টের ধরন (Account Type) *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRegRole('citizen')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                      regRole === 'citizen'
+                        ? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-600'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
+                      <User className={`w-4 h-4 ${regRole === 'citizen' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                      <span>কৃষক / নাগরিক</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">সাধারণ নাগরিক ও কৃষি সেবার জন্য</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRegRole('officer')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                      regRole === 'officer'
+                        ? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-600'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
+                      <ShieldCheck className={`w-4 h-4 ${regRole === 'officer' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                      <span>কর্মকর্তা (Officer)</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">উপসহকারী কৃষি কর্মকর্তা পোর্টাল</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  পূর্ণ নাম *
+                  {regRole === 'officer' ? 'কর্মকর্তার পূর্ণ নাম *' : 'পূর্ণ নাম *'}
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -315,7 +354,7 @@ export default function AuthModal() {
                     type="text"
                     value={regFullName}
                     onChange={(e) => setRegFullName(e.target.value)}
-                    placeholder="আব্দুল কুদ্দুস"
+                    placeholder={regRole === 'officer' ? 'মোঃ রফিকুল ইসলাম' : 'আব্দুল কুদ্দুস'}
                     required
                     className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
                   />
@@ -339,9 +378,27 @@ export default function AuthModal() {
                 </div>
               </div>
 
+              {regRole === 'officer' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    অফিসিয়াল ইমেইল ঠিকানা
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="officer@pollibondhu.gov.bd"
+                      className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  জাতীয় পরিচয়পত্র নম্বর (NID) *
+                  {regRole === 'officer' ? 'জাতীয় পরিচয়পত্র / কর্মকর্তা আইডি (NID) *' : 'জাতীয় পরিচয়পত্র নম্বর (NID) *'}
                 </label>
                 <div className="relative">
                   <FileText className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -358,7 +415,9 @@ export default function AuthModal() {
 
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-700">অবস্থান তথ্য</span>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {regRole === 'officer' ? 'দায়িত্বপ্রাপ্ত কর্মস্থল (Jurisdiction)' : 'অবস্থান তথ্য'}
+                  </span>
                   <button
                     type="button"
                     onClick={handleDetectLocationForRegistration}
@@ -370,14 +429,14 @@ export default function AuthModal() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block text-[11px] text-slate-500 mb-0.5">বিভাগ</label>
                     <input
                       type="text"
                       value={regDivision}
                       onChange={(e) => setRegDivision(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-900"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-900"
                     />
                   </div>
                   <div>
@@ -386,7 +445,16 @@ export default function AuthModal() {
                       type="text"
                       value={regDistrict}
                       onChange={(e) => setRegDistrict(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-900"
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">উপজেলা</label>
+                    <input
+                      type="text"
+                      value={regUpazila}
+                      onChange={(e) => setRegUpazila(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-900"
                     />
                   </div>
                 </div>
@@ -414,7 +482,11 @@ export default function AuthModal() {
                 disabled={loading}
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm mt-1"
               >
-                {loading ? 'প্রসেসিং হচ্ছে...' : 'নিবন্ধন সম্পন্ন করুন'}
+                {loading
+                  ? 'প্রসেসিং হচ্ছে...'
+                  : regRole === 'officer'
+                  ? 'কর্মকর্তা নিবন্ধন সম্পন্ন করুন'
+                  : 'কৃষক/নাগরিক নিবন্ধন সম্পন্ন করুন'}
               </button>
             </form>
           )}

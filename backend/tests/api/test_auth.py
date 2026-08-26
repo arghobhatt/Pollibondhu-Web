@@ -24,6 +24,25 @@ def test_register_user_success(client):
     assert data["user"]["phone_number"] == TEST_PHONE
     assert data["user"]["full_name"] == "রহিম উদ্দিন"
 
+def test_register_officer_success(client):
+    off_phone = f"+88018{random.randint(10000000, 99999999)}"
+    off_nid = f"1988{random.randint(10000000, 99999999)}"
+    payload = {
+        "full_name": "মোঃ রফিকুল ইসলাম (কর্মকর্তা)",
+        "phone_number": off_phone,
+        "email": f"officer.{off_nid}@pollibondhu.gov.bd",
+        "nid_number": off_nid,
+        "password": "securepassword123",
+        "division": "সিলেট",
+        "district": "সিলেট",
+        "upazila": "সদর",
+        "role": "officer"
+    }
+    response = client.post("/api/auth/register", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["user"]["role"] == "officer"
+
 def test_register_duplicate_phone_failure(client):
     payload = {
         "full_name": "রহিম উদ্দিন",
