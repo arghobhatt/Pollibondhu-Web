@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/layout/PageHeader';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import DataTable, { DataTableRow, DataTableCell } from '../components/ui/DataTable';
 import { FormField, Select } from '../components/ui/FormComponents';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -20,17 +20,24 @@ export default function TransportPage() {
   const fetchLocations = async () => {
     try {
       const res = await fetch('/api/transport/locations');
-      if (res.ok) setLocations(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setLocations({
+          origins: data.origins || [],
+          destinations: data.destinations || [],
+          vehicle_types: data.vehicle_types || []
+        });
+      }
     } catch (e) {}
   };
 
-  const fetchRoutes = async () => {
+  const fetchRoutes = async (origin = '', destination = '', vehicle = '') => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedOrigin) params.append('origin', selectedOrigin);
-      if (selectedDestination) params.append('destination', selectedDestination);
-      if (selectedVehicleType) params.append('vehicle_type', selectedVehicleType);
+      if (origin) params.append('origin', origin);
+      if (destination) params.append('destination', destination);
+      if (vehicle) params.append('vehicle_type', vehicle);
 
       const res = await fetch(`/api/transport/routes?${params.toString()}`);
       if (res.ok) setRoutes(await res.json());
@@ -47,14 +54,14 @@ export default function TransportPage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchRoutes();
+    fetchRoutes(selectedOrigin, selectedDestination, selectedVehicleType);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="গ্রামীণ পরিবহন সময়সূচী"
-        description="উপজেলা ও ইউনিয়ন রুটের লোকাল বাস, লঞ্চ ও ট্রেনের সময়সূচী ও ভাড়ার তালিকা"
+        description="উপজেলা, জেলা ও ইউনিয়ন রুটের লোকাল বাস, লঞ্চ, ট্রেন ও অটোর সময়সূচী ও ভাড়ার তালিকা"
       />
 
       <Card>
@@ -95,7 +102,7 @@ export default function TransportPage() {
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <Search className="w-3.5 h-3.5" />
-                <span>{loading ? 'খোঁজা হচ্ছে...' : 'সময়সূচী খুঁজুন'}</span>
+                <span>{loading ? 'খোঁজা হচ্ছে...' : 'সময়সূচী খুঁজুন'}</span>
               </button>
             </div>
           </form>

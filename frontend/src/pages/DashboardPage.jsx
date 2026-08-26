@@ -4,6 +4,7 @@ import PageHeader from '../components/layout/PageHeader';
 import StatCard from '../components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
+import { useLocation } from '../hooks/useLocation';
 import { 
   CloudSun, 
   TrendingUp, 
@@ -25,10 +26,11 @@ import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
   const { currentUser, authToken, openAuthModal } = useAuth();
+  const { locationName, coords } = useLocation();
   
   const [dashboardData, setDashboardData] = useState(null);
   const [citizenStats, setCitizenStats] = useState(null);
-  const [weatherCity, setWeatherCity] = useState('ঢাকা');
+  const [weatherCity, setWeatherCity] = useState(locationName || 'ঢাকা');
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,6 +39,10 @@ export default function DashboardPage() {
   const [loanDuration, setLoanDuration] = useState(12);
   const [loanScheme, setLoanScheme] = useState('standard_emi');
   const [loanResult, setLoanResult] = useState(null);
+
+  useEffect(() => {
+    if (locationName) setWeatherCity(locationName);
+  }, [locationName]);
 
   const fetchDashboard = async () => {
     try {
@@ -60,7 +66,13 @@ export default function DashboardPage() {
 
   const fetchWeather = async () => {
     try {
-      const res = await fetch(`/api/weather?city=${encodeURIComponent(weatherCity)}`);
+      let url = '/api/weather';
+      if (coords) {
+        url += `?lat=${coords.latitude}&lon=${coords.longitude}`;
+      } else {
+        url += `?city=${encodeURIComponent(weatherCity)}`;
+      }
+      const res = await fetch(url);
       if (res.ok) setWeatherData(await res.json());
     } catch (e) {}
   };
@@ -69,7 +81,7 @@ export default function DashboardPage() {
     fetchDashboard();
     fetchWeather();
     if (authToken) fetchCitizenStats();
-  }, [weatherCity, authToken]);
+  }, [weatherCity, coords, authToken]);
 
   const handleCalculateLoan = async (e) => {
     e.preventDefault();
@@ -155,8 +167,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
             title="আবহাওয়া অবস্থা"
-            value={`${dashboardData.weather.temperature_celsius}°C`}
-            subtitle={`${dashboardData.weather.city} (${dashboardData.weather.condition_bn})`}
+            value={`${weatherData ? weatherData.temperature_celsius : dashboardData.weather.temperature_celsius}°C`}
+            subtitle={`${weatherData ? weatherData.city : dashboardData.weather.city} (${weatherData ? weatherData.condition_bn : dashboardData.weather.condition_bn})`}
             icon={CloudSun}
             color="cyan"
           />
@@ -319,6 +331,9 @@ export default function DashboardPage() {
                   <option value="সিলেট">সিলেট</option>
                   <option value="রাজশাহী">রাজশাহী</option>
                   <option value="রংপুর">রংপুর</option>
+                  <option value="খুলনা">খুলনা</option>
+                  <option value="বরিশাল">বরিশাল</option>
+                  <option value="ময়মনসিংহ">ময়মনসিংহ</option>
                 </select>
               </div>
 

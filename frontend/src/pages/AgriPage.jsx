@@ -4,8 +4,6 @@ import PageHeader from '../components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import DataTable, { DataTableRow, DataTableCell } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
-import { LoadingState } from '../components/ui/LoadingState';
-import { EmptyState } from '../components/ui/EmptyState';
 import { FormField, Input, Select } from '../components/ui/FormComponents';
 import { 
   Sprout, 
@@ -14,11 +12,8 @@ import {
   Calculator, 
   BookOpen, 
   Search, 
-  CheckCircle2, 
   ShieldCheck,
-  FileText,
-  Filter,
-  ArrowUpDown
+  Filter
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../lib/utils';
 
@@ -40,6 +35,7 @@ export default function AgriPage() {
   const [newCropNameBn, setNewCropNameBn] = useState('');
   const [newMarketName, setNewMarketName] = useState('');
   const [newDistrict, setNewDistrict] = useState('');
+  const [newDivision, setNewDivision] = useState('ঢাকা');
   const [newPriceBdt, setNewPriceBdt] = useState('');
   const [priceUpdateMsg, setPriceUpdateMsg] = useState('');
 
@@ -60,10 +56,12 @@ export default function AgriPage() {
     } catch (e) {}
   };
 
-  const fetchMarketPrices = async (distQuery = '') => {
+  const fetchMarketPrices = async (distQuery = '', divQuery = '') => {
     try {
-      const url = distQuery ? `/api/agriculture/market-prices?district=${encodeURIComponent(distQuery)}` : '/api/agriculture/market-prices';
-      const res = await fetch(url);
+      const params = new URLSearchParams();
+      if (divQuery) params.append('division', divQuery);
+      if (distQuery) params.append('district', distQuery);
+      const res = await fetch(`/api/agriculture/market-prices?${params.toString()}`);
       if (res.ok) setMarketPrices(await res.json());
     } catch (e) {}
   };
@@ -86,14 +84,19 @@ export default function AgriPage() {
     fetchDiseases(diseaseSearch);
   };
 
-  const handleDistrictFilterSubmit = (e) => {
+  const handleDistrictDivisionFilterSubmit = (e) => {
     e.preventDefault();
-    fetchMarketPrices(selectedDistrict);
+    fetchMarketPrices(selectedDistrict, selectedDivision);
+  };
+
+  const handleDivisionChange = (e) => {
+    const divVal = e.target.value;
+    setSelectedDivision(divVal);
+    fetchMarketPrices(selectedDistrict, divVal);
   };
 
   const filteredMarketPrices = marketPrices
     .filter((p) => {
-      if (selectedDivision && p.division && p.division !== selectedDivision) return false;
       if (cropCategorySearch) {
         const q = cropCategorySearch.toLowerCase();
         return p.crop_name_bn.toLowerCase().includes(q) || p.crop_name.toLowerCase().includes(q);
@@ -125,18 +128,19 @@ export default function AgriPage() {
           crop_name_bn: newCropNameBn,
           market_name: newMarketName,
           district: newDistrict,
+          division: newDivision,
           price_bdt_per_mon: parseFloat(newPriceBdt)
         })
       });
       const data = await res.json();
       if (res.ok) {
-        setPriceUpdateMsg('কৃষি বাজারদর সফলভাবে আপডেট করা হয়েছে!');
+        setPriceUpdateMsg('কৃষি বাজারদর সফলভাবে রেকর্ড করা হয়েছে!');
         setNewCropName('');
         setNewCropNameBn('');
         setNewMarketName('');
         setNewDistrict('');
         setNewPriceBdt('');
-        fetchMarketPrices();
+        fetchMarketPrices(selectedDistrict, selectedDivision);
       } else {
         setPriceUpdateMsg(data.detail || 'বাজারদর আপডেট করা সম্ভব হয়নি।');
       }
@@ -209,7 +213,7 @@ export default function AgriPage() {
           </div>
           <h2 className="text-xl font-bold tracking-tight">কৃষি ও বাজার তথ্য কেন্দ্র</h2>
           <p className="text-xs text-emerald-100/90 leading-relaxed font-normal">
-            ২০+ ফসলের রোগ নির্ণয়, অনুমোদিত চিকিৎসা, ৮ বিভাগের শস্য বাজারদর ও সহজ শর্তে কৃষি ঋণের হিসাব।
+            ২০+ ফসলের রোগ নির্ণয়, ৮ বিভাগের শস্য বাজারদর ও সহজ শর্তে কৃষি ঋণের হিসাব।
           </p>
         </div>
       </div>
@@ -338,9 +342,9 @@ export default function AgriPage() {
         <div className="space-y-6">
           <Card>
             <CardContent className="pt-6 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <form onSubmit={handleDistrictDivisionFilterSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <FormField label="বিভাগ নির্বাচন">
-                  <Select value={selectedDivision} onChange={(e) => setSelectedDivision(e.target.value)}>
+                  <Select value={selectedDivision} onChange={handleDivisionChange}>
                     <option value="">সকল বিভাগ</option>
                     <option value="ঢাকা">ঢাকা</option>
                     <option value="চট্টগ্রাম">চট্টগ্রাম</option>
@@ -376,18 +380,17 @@ export default function AgriPage() {
                     <option value="desc">বেশি থেকে কম</option>
                   </Select>
                 </FormField>
-              </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={handleDistrictFilterSubmit}
-                  type="button"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg shadow-sm flex items-center gap-1.5"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                  <span>অনুসন্ধান করুন</span>
-                </button>
-              </div>
+                <div className="sm:col-span-4 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg shadow-sm flex items-center gap-1.5"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>ফিল্টার প্রয়োগ করুন</span>
+                  </button>
+                </div>
+              </form>
             </CardContent>
           </Card>
 
@@ -424,6 +427,18 @@ export default function AgriPage() {
                   <FormField label="Crop Name (English)">
                     <Input value={newCropName} onChange={(e) => setNewCropName(e.target.value)} placeholder="Mustard" required />
                   </FormField>
+                  <FormField label="বিভাগ">
+                    <Select value={newDivision} onChange={(e) => setNewDivision(e.target.value)}>
+                      <option value="ঢাকা">ঢাকা</option>
+                      <option value="চট্টগ্রাম">চট্টগ্রাম</option>
+                      <option value="সিলেট">সিলেট</option>
+                      <option value="রাজশাহী">রাজশাহী</option>
+                      <option value="রংপুর">রংপুর</option>
+                      <option value="খুলনা">খুলনা</option>
+                      <option value="বরিশাল">বরিশাল</option>
+                      <option value="ময়মনসিংহ">ময়মনসিংহ</option>
+                    </Select>
+                  </FormField>
                   <FormField label="বাজার / হাট">
                     <Input value={newMarketName} onChange={(e) => setNewMarketName(e.target.value)} placeholder="ধামরাই হাট" required />
                   </FormField>
@@ -433,8 +448,8 @@ export default function AgriPage() {
                   <FormField label="মূল্য (টাকা / মন)">
                     <Input type="number" value={newPriceBdt} onChange={(e) => setNewPriceBdt(e.target.value)} placeholder="3200" required />
                   </FormField>
-                  <div className="flex items-end">
-                    <button type="submit" className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm">
+                  <div className="sm:col-span-3 flex justify-end">
+                    <button type="submit" className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm">
                       বাজারদর দাখিল করুন
                     </button>
                   </div>

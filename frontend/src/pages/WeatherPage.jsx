@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/layout/PageHeader';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import StatCard from '../components/ui/StatCard';
 import { LoadingState } from '../components/ui/LoadingState';
 import { Select } from '../components/ui/FormComponents';
 import { useLocation } from '../hooks/useLocation';
 import { CloudSun, Wind, Droplets, RefreshCw, Calendar, MapPin, Navigation } from 'lucide-react';
-import { formatDate } from '../lib/utils';
 
 export default function WeatherPage() {
-  const { locationName, coords, loading: locLoading, error: locError, permissionState, requestLocation, setManualLocation } = useLocation();
+  const { locationName, coords, loading: locLoading, error: locError, requestLocation, setManualLocation } = useLocation();
 
   const [locations, setLocations] = useState(['ঢাকা', 'চট্টগ্রাম', 'সিলেট', 'রাজশাহী', 'খুলনা', 'বরিশাল', 'রংপুর', 'ময়মনসিংহ', 'গাজীপুর', 'বগুড়া', 'পাবনা', 'যশোর', 'কুমিল্লা']);
   const [weatherData, setWeatherData] = useState(null);
@@ -22,10 +21,19 @@ export default function WeatherPage() {
     } catch (e) {}
   };
 
-  const fetchWeather = async (city) => {
+  const fetchWeather = async (cityParam = null, coordsParam = null) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+      let url = '/api/weather';
+      if (coordsParam) {
+        url += `?lat=${coordsParam.latitude}&lon=${coordsParam.longitude}`;
+      } else if (cityParam) {
+        url += `?city=${encodeURIComponent(cityParam)}`;
+      } else if (locationName) {
+        url += `?city=${encodeURIComponent(locationName)}`;
+      }
+
+      const res = await fetch(url);
       if (res.ok) {
         setWeatherData(await res.json());
       }
@@ -40,21 +48,32 @@ export default function WeatherPage() {
   }, []);
 
   useEffect(() => {
-    if (locationName) {
-      fetchWeather(locationName);
+    if (coords) {
+      fetchWeather(null, coords);
+    } else if (locationName) {
+      fetchWeather(locationName, null);
     }
-  }, [locationName]);
+  }, [coords, locationName]);
 
   const handleCityChange = (e) => {
     const city = e.target.value;
     setManualLocation(city);
+    fetchWeather(city, null);
+  };
+
+  const handleRefreshClick = () => {
+    if (coords) {
+      fetchWeather(null, coords);
+    } else {
+      fetchWeather(locationName, null);
+    }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="ডিজিটাল আবহাওয়া ও লাইভ জিপিএস পূর্বাভাস"
-        description="আপনার ডিভাইসের রিয়েল-টাইম অবস্থান সনাক্তকরণ এবং জেলা ভিত্তিক লাইভ আবহাওয়া আপডেট"
+        description="আপনার ডিভাইসের রিয়েল-টাইম জিপিএস অবস্থান এবং জেলা ভিত্তিক লাইভ আবহাওয়া সংকেত"
       />
 
       <Card>
@@ -80,11 +99,11 @@ export default function WeatherPage() {
                 className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <Navigation className={`w-3.5 h-3.5 ${locLoading ? 'animate-spin' : ''}`} />
-                <span>{locLoading ? 'অবস্থান খোঁজা হচ্ছে...' : 'লাইভ GPS অবস্থান খুঁজুন'}</span>
+                <span>{locLoading ? 'জিপিএস খোঁজা হচ্ছে...' : 'অবস্থান আপডেট করুন'}</span>
               </button>
 
               <button
-                onClick={() => fetchWeather(locationName)}
+                onClick={handleRefreshClick}
                 disabled={loading}
                 type="button"
                 className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-slate-200"
@@ -102,9 +121,9 @@ export default function WeatherPage() {
           )}
 
           {coords && (
-            <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono bg-slate-50 p-2 rounded-lg border border-slate-200">
-              <span className="font-semibold text-emerald-700">জিপিএস স্থানাঙ্ক:</span>
-              <span>Lat {coords.latitude.toFixed(4)}, Lon {coords.longitude.toFixed(4)}</span>
+            <div className="flex items-center gap-2 text-[11px] text-slate-600 font-mono bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              <span className="font-semibold text-emerald-700">সনাক্তকৃত GPS স্থানাঙ্ক:</span>
+              <span>Latitude {coords.latitude.toFixed(4)}, Longitude {coords.longitude.toFixed(4)}</span>
             </div>
           )}
         </CardContent>
@@ -118,14 +137,14 @@ export default function WeatherPage() {
             <StatCard
               title="বর্তমান তাপমাত্রা"
               value={`${weatherData.temperature_celsius}°C`}
-              subtitle={`${weatherData.city} (${weatherData.condition_bn})`}
+              subtitle={`অবস্থান: ${weatherData.city} (${weatherData.condition_bn})`}
               icon={CloudSun}
               color="emerald"
             />
             <StatCard
               title="বাতাসের আর্দ্রতা"
               value={`${weatherData.humidity}%`}
-              subtitle="কৃষি কাজের উপযোগী আর্দ্রতা"
+              subtitle="কৃষি জমিতে আর্দ্রতা মাত্রা"
               icon={Droplets}
               color="cyan"
             />

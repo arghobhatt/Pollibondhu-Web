@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 
 export function useLocation() {
   const [coords, setCoords] = useState(() => {
-    const saved = localStorage.getItem('pollibondhu_user_coords');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('pollibondhu_user_coords');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   const [locationName, setLocationName] = useState(() => {
@@ -26,7 +30,7 @@ export function useLocation() {
   };
 
   const requestLocation = () => {
-    if (!navigator.geolocation) {
+    if (!navigator || !navigator.geolocation) {
       setError('আপনার ব্রাউজারে Geolocation সমর্থিত নয়।');
       return;
     }
@@ -52,7 +56,7 @@ export function useLocation() {
       },
       (err) => {
         setLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
+        if (err && err.code === err.PERMISSION_DENIED) {
           setPermissionState('denied');
           setError('অবস্থান অনুমতি প্রত্যাখ্যান করা হয়েছে। ম্যানুয়ালি জেলা নির্বাচন করুন।');
         } else {
