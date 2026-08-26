@@ -15,6 +15,7 @@ import {
   FileText, 
   ShieldAlert,
   Bell,
+  User,
   X,
   Sprout as LogoIcon
 } from 'lucide-react';
@@ -40,7 +41,8 @@ export default function MobileNavigation({ isOpen, onClose }) {
   if (currentUser) {
     mainNavItems.push(
       { path: '/my-applications', label: 'আমার আবেদনসমূহ', icon: FileText },
-      { path: '/notifications', label: 'নোটিফিকেশন', icon: Bell }
+      { path: '/notifications', label: 'নোটিফিকেশন', icon: Bell },
+      { path: '/profile', label: 'আমার প্রোফাইল', icon: User }
     );
   }
 

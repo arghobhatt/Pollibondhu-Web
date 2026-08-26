@@ -103,7 +103,7 @@ export default function TransportPage() {
       </Card>
 
       {loading ? (
-        <LoadingSpinner message="পরিবহন রুট ও সময়সূচী লোড হচ্ছে..." />
+        <LoadingState message="পরিবহন রুট ও সময়সূচী লোড হচ্ছে..." />
       ) : routes.length === 0 ? (
         <EmptyState
           icon={Bus}
