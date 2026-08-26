@@ -1,10 +1,8 @@
 from sqlalchemy.orm import Session
-from app.db.database import engine, Base, SessionLocal
+from app.core.security import hash_password
 from app.models.orm import (
     User,
     UserRole,
-    ServiceApplication,
-    ApplicationStatus,
     CropMarketPrice,
     CropDisease,
     AgriArticle,
@@ -12,25 +10,19 @@ from app.models.orm import (
     TransportSchedule,
     EmergencyContact,
     ForumPost,
-    TrainingCourse
+    TrainingCourse,
+    ServiceApplication,
+    ApplicationStatus
 )
 
-def init_db(db: Session = None):
-    Base.metadata.create_all(bind=engine)
-    
-    close_db = False
-    if db is None:
-        db = SessionLocal()
-        close_db = True
-
+def init_db(db: Session, close_db: bool = False) -> None:
     try:
-        from app.core.security import hash_password
         default_pwd_hash = hash_password("password123")
 
         admin = db.query(User).filter(User.phone_number == "+8801700000000").first()
         if not admin:
             admin = User(
-                full_name="পল্লীবন্ধু অ্যাডমিন",
+                full_name="সিস্টেম এডমিন (প্রধান কার্যালয়)",
                 phone_number="+8801700000000",
                 email="admin@pollibondhu.gov.bd",
                 nid_number="1990123456789",
@@ -73,7 +65,7 @@ def init_db(db: Session = None):
             db.add(farmer)
         db.commit()
 
-        if db.query(CropMarketPrice).count() < 10:
+        if db.query(CropMarketPrice).count() < 25:
             db.query(CropMarketPrice).delete()
             prices = [
                 CropMarketPrice(crop_name="Aman Paddy", crop_name_bn="আমন ধান", market_name="ধামরাই হাট", district="ঢাকা", division="ঢাকা", price_bdt_per_mon=1350.0, reported_by_id=officer.id),
@@ -88,9 +80,39 @@ def init_db(db: Session = None):
                 CropMarketPrice(crop_name="Brinjal", crop_name_bn="বেগুন", market_name="বরিশাল পোট রোড", district="বরিশাল", division="বরিশাল", price_bdt_per_mon=1400.0, reported_by_id=officer.id),
                 CropMarketPrice(crop_name="Mustard", crop_name_bn="সরিষা", market_name="ময়মনসিংহ মেছুয়া বাজার", district="ময়মনসিংহ", division="ময়মনসিংহ", price_bdt_per_mon=3400.0, reported_by_id=officer.id),
                 CropMarketPrice(crop_name="Lentil", crop_name_bn="মসুর ডাল", market_name="কুষ্টিয়া বড় বাজার", district="কুষ্টিয়া", division="খুলনা", price_bdt_per_mon=4800.0, reported_by_id=officer.id),
-                CropMarketPrice(crop_name="Banana", crop_name_bn="সবরি কলা (প্রতি কাঁদি)", market_name="নরসিংদী বাজার", district="নরসিংদী", division="ঢাকা", price_bdt_per_mon=650.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Banana", crop_name_bn="সবরি কলা", market_name="নরসিংদী বাজার", district="নরসিংদী", division="ঢাকা", price_bdt_per_mon=650.0, reported_by_id=officer.id),
                 CropMarketPrice(crop_name="Cabbage", crop_name_bn="বাঁধাকপি", market_name="দিনাজপুর গাবতলী", district="দিনাজপুর", division="রংপুর", price_bdt_per_mon=800.0, reported_by_id=officer.id),
-                CropMarketPrice(crop_name="Fish", crop_name_bn="রুই মাছ (২ কেজি+)", market_name="চাঁদপুর ঘাট", district="চাঁদপুর", division="চট্টগ্রাম", price_bdt_per_mon=12000.0, reported_by_id=officer.id)
+                CropMarketPrice(crop_name="Fish", crop_name_bn="রুই মাছ (২ কেজি+)", market_name="চাঁদপুর ঘাট", district="চাঁদপুর", division="চট্টগ্রাম", price_bdt_per_mon=12000.0, reported_by_id=officer.id),
+                
+                CropMarketPrice(crop_name="Aman Paddy", crop_name_bn="আমন ধান (সিলেট)", market_name="সিলেট সুবহানিঘাট আড়ত", district="সিলেট", division="সিলেট", price_bdt_per_mon=1380.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Boro Paddy", crop_name_bn="বোরো ধান (কদমতলী)", market_name="কদমতলী শস্য বাজার", district="সিলেট", division="সিলেট", price_bdt_per_mon=1450.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Chili", crop_name_bn="কাঁচা মরিচ (সিলেট)", market_name="বন্দরবাজার পাইকারি আড়ত", district="সিলেট", division="সিলেট", price_bdt_per_mon=3400.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Pineapple", crop_name_bn="আনারস (হানি কুইন)", market_name="জিন্দাবাজার ফল মার্কেট", district="সিলেট", division="সিলেট", price_bdt_per_mon=1200.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Banana", crop_name_bn="কাঁচকলা ও সবরি কলা", market_name="আম্বরখানা কাঁচাবাজার", district="সিলেট", division="সিলেট", price_bdt_per_mon=720.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Cauliflower", crop_name_bn="ফুলকপি", market_name="সিলেট বন্দরবাজার", district="সিলেট", division="সিলেট", price_bdt_per_mon=1100.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Gourd", crop_name_bn="লাউ ও কদু", market_name="সিলেট সুবহানিঘাট আড়ত", district="সিলেট", division="সিলেট", price_bdt_per_mon=900.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Leafy Vegetables", crop_name_bn="লাল শাক ও পালং শাক", market_name="কদমতলী বাজার", district="সিলেট", division="সিলেট", price_bdt_per_mon=650.0, reported_by_id=officer.id),
+                
+                CropMarketPrice(crop_name="Tea Leaf", crop_name_bn="কাঁচা চা পাতা", market_name="শ্রীমঙ্গল চা বাগান আড়ত", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=2200.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Lemon", crop_name_bn="জারা ও এলাচি লেবু", market_name="শ্রীমঙ্গল পাইকারি বাজার", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=2500.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Mustard", crop_name_bn="সরিষা (মৌলভীবাজার)", market_name="কুলাউড়া সমশেরনগর বাজার", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=3500.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Potato", crop_name_bn="গোল আলু", market_name="মৌলভীবাজার চৌমুহনা হাট", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=980.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Pumpkin", crop_name_bn="মিষ্টি কুমড়া", market_name="কমলগঞ্জ শমশেরনগর বাজার", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=750.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Beans", crop_name_bn="উচ্চ ফলনশীল শিম", market_name="শ্রীমঙ্গল সবজি আড়ত", district="মৌলভীবাজার", division="সিলেট", price_bdt_per_mon=1300.0, reported_by_id=officer.id),
+                
+                CropMarketPrice(crop_name="Katari Paddy", crop_name_bn="সুগন্ধি কাটারিভোগ ধান", market_name="হবিগঞ্জ চৌধুরী বাজার", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=1680.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Garlic", crop_name_bn="দেশি রসুন (হবিগঞ্জ)", market_name="মাধবপুর পাইকারি হাট", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=4600.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Onion", crop_name_bn="দেশি পেঁয়াজ (হবিগঞ্জ)", market_name="শায়েস্তাগঞ্জ নতুন বাজার", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=2750.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Brinjal", crop_name_bn="বেগুন (হবিগঞ্জ)", market_name="হবিগঞ্জ চৌধুরী বাজার", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=1350.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Cucumber", crop_name_bn="শশা ও খিরা", market_name="নবীগঞ্জ বাজার", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=850.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Maize", crop_name_bn="ভুট্টা (হবিগঞ্জ)", market_name="চুনারুঘাট মধ্যবাজার", district="হবিগঞ্জ", division="সিলেট", price_bdt_per_mon=1150.0, reported_by_id=officer.id),
+                
+                CropMarketPrice(crop_name="Haor Fish", crop_name_bn="হাওরের বোয়াল ও রুই মাছ", market_name="সুনামগঞ্জ মধ্যবাজার আড়ত", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=11500.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Haor Boro Paddy", crop_name_bn="বোরো ধান (হাওর এলাকা)", market_name="ছাতক পুরান বাজার", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=1390.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Mango", crop_name_bn="আম (আম্রপালি)", market_name="জগন্নাথপুর আড়ত", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=3200.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Cabbage", crop_name_bn="বাঁধাকপি (সুনামগঞ্জ)", market_name="সুনামগঞ্জ মধ্যবাজার", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=820.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Lentil", crop_name_bn="মসুর ডাল (সুনামগঞ্জ)", market_name="দিরাই বাজার", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=4700.0, reported_by_id=officer.id),
+                CropMarketPrice(crop_name="Wheat", crop_name_bn="গম (ছাতক)", market_name="ছাতক বাজার", district="সুনামগঞ্জ", division="সিলেট", price_bdt_per_mon=1580.0, reported_by_id=officer.id)
             ]
             db.add_all(prices)
             db.commit()
@@ -188,17 +210,52 @@ def init_db(db: Session = None):
             db.add_all(posts)
             db.commit()
 
-        if db.query(TrainingCourse).count() < 5:
-            db.query(TrainingCourse).delete()
-            courses = [
-                TrainingCourse(title_bn="আধুনিক প্রযুক্তি নির্ভর স্মার্ট ধান চাষাবাদ ও কীটনাশক মুক্ত ফলন", category="ডিজিটাল কৃষি", instructor_bn="ড. মোঃ আহসান হাবীব (প্রধান বৈজ্ঞানিক কর্মকর্তা, BRRI)", duration_hours=6, video_url="https://www.youtube.com/embed/V-_O7nl0IiU", description_bn="ড্রোন দিয়ে সার ছিটানো, সেচ সেন্সর ব্যবহার এবং জৈব বালাইনাশক স্প্রে করার আধুনিক কৃষক প্রশিক্ষণ কোর্স।"),
-                TrainingCourse(title_bn="বায়োফ্লক মৎস্য চাষ ও পুকুর ব্যবস্থাপনা অনলাইন গাইড", category="মৎস্য চাষ", instructor_bn="কৃষিবিদ তানভীর আহমেদ", duration_hours=4, video_url="https://www.youtube.com/embed/u31qwQUejiM", description_bn="কম জমিতে বায়োফ্লক পদ্ধতিতে অধিক মাছ উৎপাদনের বৈজ্ঞানিক গাইডলাইন।"),
-                TrainingCourse(title_bn="শীতকালীন সবজি চাষ ও হাইব্রিড জাতের বীজ লালন-পালন", category="সবজি চাষ", instructor_bn="মোছাঃ শিরিন আক্তার (কৃষি সম্প্রসারণ কর্মকর্তা)", duration_hours=5, video_url="https://www.youtube.com/embed/dQw4w9WgXcQ", description_bn="টমেটো, ফুলকপি ও বেগুন চাষে মাটির আর্দ্রতা রক্ষা ও পোকা দমনের বাস্তবধর্মী টিউটোরিয়াল।"),
-                TrainingCourse(title_bn="নিরাপদ মোবাইল ব্যাংকিং, বিকাশ/নগদ ও ডিজিটাল অর্থায়ন সুরক্ষা", category="ডিজিটাল দক্ষতা", instructor_bn="মোঃ আরিফ হোসাইন (আইটি সুরক্ষা কনসালট্যান্ট)", duration_hours=3, video_url="https://www.youtube.com/embed/3JZ_D3ELwOQ", description_bn="গ্রামীণ কৃষকদের জন্য মোবাইল ফিন্যান্সিয়াল সার্ভিসে প্রতারণা এড়ানো ও নিরাপদ লেনদেনের ভিডিও পাঠ।"),
-                TrainingCourse(title_bn="উন্নত জাতের গাভী পালন, ডেইরি খামার ও দুগ্ধ প্রক্রিয়া প্রক্রিয়া", category="প্রাণিসম্পদ", instructor_bn="ড. মোঃ কামরুল হাসান (ভেটেরিনারি সার্জন)", duration_hours=7, video_url="https://www.youtube.com/embed/2g811iuBUac", description_bn="ডেইরি খামারে পশুখাদ্য সাইলেজ তৈরি, টিকাদান ও দুগ্ধ সংরক্ষণ প্রযুক্তির সম্পূর্ণ ক্লাস।")
-            ]
-            db.add_all(courses)
-            db.commit()
+        # Update Training Courses with the 5 EXACT verified YouTube Videos
+        db.query(TrainingCourse).delete()
+        courses = [
+            TrainingCourse(
+                title_bn="বায়োফ্লক মৎস্য চাষ ও পুকুর ছাড়া কমার্শিয়াল মাছ চাষ গাইড (ভিডিও-১)",
+                category="মৎস্য চাষ",
+                instructor_bn="কৃষিবিদ তানভীর আহমেদ (Agro BD)",
+                duration_hours=4,
+                video_url="https://www.youtube.com/embed/otggMdQPJGI",
+                description_bn="পুকুর ছাড়াই বায়োফ্লক প্রযুক্তিতে আধুনিক কমার্শিয়াল মৎস্য চাষের বাস্তবসম্মত ভিডিও নির্দেশিকা।"
+            ),
+            TrainingCourse(
+                title_bn="শীতের বাগান জমজমাট করার F1 বীজ কালেকশন ও বপন নির্দেশিকা",
+                category="সবজি চাষ",
+                instructor_bn="মোছাঃ শিরিন আক্তার (কৃষি বিশেষজ্ঞ)",
+                duration_hours=5,
+                video_url="https://www.youtube.com/embed/FH0aTF_GqpA",
+                description_bn="শীতকালীন হাইব্রিড F1 সবজি বীজ নির্বাচন, চারা তৈরি ও পরিচর্যার বিশেষ ভিডিও ক্লাস।"
+            ),
+            TrainingCourse(
+                title_bn="বিকাশ, নগদ, রকেট হ্যাক হয় কীভাবে? নিরাপদ থাকার সঠিক উপায়",
+                category="ডিজিটাল আর্থিক সুরক্ষা",
+                instructor_bn="মোঃ আরিফ হোসাইন (আইটি সুরক্ষা কনসালট্যান্ট)",
+                duration_hours=3,
+                video_url="https://www.youtube.com/embed/zFUwF9WGwR8",
+                description_bn="গ্রামীণ নাগরিকদের জন্য বিকাশ, নগদ ও রকেট মোবাইল ব্যাংকিং হ্যাকিং প্রতিরোধ ও ডিজিটাল নিরাপত্তার কৌশল।"
+            ),
+            TrainingCourse(
+                title_bn="বাংলাদেশের প্রযুক্তি নির্ভর আধুনিক ক্যাটেল ডেইরি ফার্ম (Nahar Dairy)",
+                category="প্রাণিসম্পদ",
+                instructor_bn="ড. মোঃ কামরুল হাসান (কৃষিকথা)",
+                duration_hours=7,
+                video_url="https://www.youtube.com/embed/iwl58ID80Vs",
+                description_bn="প্রযুক্তি নির্ভর ক্যাটেল ফার্ম ও আধুনিক ডেইরি র্যাঞ্চ পরিচালনার সম্পূর্ণ প্র্যাকটিক্যাল গাইডলাইন।"
+            ),
+            TrainingCourse(
+                title_bn="ধানের কুশি বৃদ্ধির বিশেষ কৌশল ও সুষম ব্যবস্থাপনা (Smart Agro Seeds)",
+                category="শস্য প্রযুক্তি",
+                instructor_bn="ড. মোঃ আহসান হাবীব (ব্ররি)",
+                duration_hours=6,
+                video_url="https://www.youtube.com/embed/HHmTHEaLR64",
+                description_bn="আমন ও বোরো ধান চাষে গাছে অধিক কুশি বৃদ্ধি ও বাম্পার ফলন পাওয়ার বৈজ্ঞানিক পদ্ধতি।"
+            )
+        ]
+        db.add_all(courses)
+        db.commit()
 
         app_rec = db.query(ServiceApplication).filter(ServiceApplication.application_number == "APP-2026-8801").first()
         if not app_rec and farmer:

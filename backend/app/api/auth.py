@@ -39,6 +39,11 @@ def get_me(current_user: User = Depends(get_current_active_user)):
 def update_me(req: UserProfileUpdateDTO, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return auth_service.update_user_profile(db, current_user, req)
 
+@router.delete("/me")
+@router.delete("/account")
+def delete_account(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    return auth_service.delete_user_account(db, current_user)
+
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordDTO, db: Session = Depends(get_db)):
     return auth_service.forgot_password(db, req)

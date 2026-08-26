@@ -109,3 +109,26 @@ def test_reset_password_success(client):
     }
     login_res = client.post("/api/auth/login", json=login_payload)
     assert login_res.status_code == 200
+
+def test_delete_account_success(client):
+    del_phone = f"+88019{random.randint(10000000, 99999999)}"
+    del_nid = f"1999{random.randint(10000000, 99999999)}"
+    reg_payload = {
+        "full_name": "ডিলেট টেস্ট ব্যবহারকারী",
+        "phone_number": del_phone,
+        "email": f"delete.{del_nid}@pollibondhu.gov.bd",
+        "nid_number": del_nid,
+        "password": "delpassword123",
+        "role": "citizen"
+    }
+    reg_res = client.post("/api/auth/register", json=reg_payload)
+    assert reg_res.status_code == 201
+    token = reg_res.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+    del_res = client.delete("/api/auth/me", headers=headers)
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "success"
+
+    login_res = client.post("/api/auth/login", json={"phone_number": del_phone, "password": "delpassword123"})
+    assert login_res.status_code == 401

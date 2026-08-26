@@ -1,30 +1,28 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from app.core.config import settings
+from app.core.security import verify_password, hash_password, create_access_token
 from app.models.orm import User, UserRole
-from app.schemas.auth import UserRegisterDTO, UserLoginDTO, TokenResponseDTO, UserResponseDTO, ForgotPasswordDTO, ResetPasswordDTO, UserProfileUpdateDTO
-from app.core.security import hash_password, verify_password, create_access_token
 from app.repositories.user_repository import user_repository
+from app.schemas.auth import (
+    UserRegisterDTO,
+    UserLoginDTO,
+    TokenResponseDTO,
+    UserResponseDTO,
+    ForgotPasswordDTO,
+    ResetPasswordDTO,
+    UserProfileUpdateDTO
+)
 
 class AuthService:
     def register_user(self, db: Session, req: UserRegisterDTO) -> TokenResponseDTO:
-        if not req.nid_number or len(req.nid_number.strip()) < 10:
+        existing_phone = user_repository.get_by_phone(db, req.phone_number)
+        if existing_phone:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="জাতীয় পরিচয়পত্র (NID) নম্বর আবশ্যক। সঠিক NID নম্বর প্রদান করুন।"
-            )
-
-        existing_user = user_repository.get_by_phone(db, req.phone_number)
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="এই মোবাইল নম্বর দিয়ে ইতিমধ্যে অ্যাকাউন্ট নিবন্ধিত রয়েছে।"
-            )
-        
-        existing_nid = db.query(User).filter(User.nid_number == req.nid_number).first()
-        if existing_nid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="এই NID নম্বর দিয়ে ইতিমধ্যে একটি একাউন্ট নিবন্ধিত রয়েছে।"
+                detail="এই মোবাইল নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।"
             )
 
         if req.email:
@@ -32,45 +30,35 @@ class AuthService:
             if existing_email:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="এই ইমেইল ঠিকানাটি ইতিমধ্যে ব্যবহৃত হয়েছে।"
+                    detail="এই ইমেইল দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।"
                 )
 
-        role_enum = UserRole.CITIZEN
-        if req.role and req.role.lower() == "officer":
-            role_enum = UserRole.OFFICER
-        elif req.role and req.role.lower() == "admin":
-            role_enum = UserRole.ADMIN
-
-        hashed_pwd = hash_password(req.password)
-        new_user = User(
+        user = User(
             full_name=req.full_name,
             phone_number=req.phone_number,
             email=req.email,
             nid_number=req.nid_number,
-            role=role_enum,
+            role=req.role,
             division=req.division,
             district=req.district,
             upazila=req.upazila,
-            password_hash=hashed_pwd,
-            is_active=True
+            password_hash=hash_password(req.password)
         )
-        user_repository.create(db, new_user)
+        user_repository.create(db, user)
 
-        token_data = {"sub": str(new_user.id), "phone": new_user.phone_number, "role": new_user.role.value}
-        access_token = create_access_token(token_data)
-
+        access_token = create_access_token(data={"sub": str(user.id), "phone": user.phone_number, "role": user.role.value})
         user_dto = UserResponseDTO(
-            id=new_user.id,
-            full_name=new_user.full_name,
-            phone_number=new_user.phone_number,
-            email=new_user.email,
-            nid_number=new_user.nid_number,
-            role=new_user.role.value,
-            division=new_user.division,
-            district=new_user.district,
-            upazila=new_user.upazila,
-            avatar_url=new_user.avatar_url,
-            is_active=new_user.is_active
+            id=user.id,
+            full_name=user.full_name,
+            phone_number=user.phone_number,
+            email=user.email,
+            nid_number=user.nid_number,
+            role=user.role.value,
+            division=user.division,
+            district=user.district,
+            upazila=user.upazila,
+            avatar_url=user.avatar_url,
+            is_active=user.is_active
         )
         return TokenResponseDTO(access_token=access_token, token_type="bearer", user=user_dto)
 
@@ -79,18 +67,16 @@ class AuthService:
         if not user or not verify_password(req.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="অবৈধ মোবাইল নম্বর অথবা পাসওয়ার্ড।"
+                detail="মোবাইল নম্বর বা পাসওয়ার্ড ভুল হয়েছে।"
             )
-        
+
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="আপনার একাউন্টটি নিষ্ক্রিয় করা হয়েছে।"
             )
 
-        token_data = {"sub": str(user.id), "phone": user.phone_number, "role": user.role.value}
-        access_token = create_access_token(token_data)
-
+        access_token = create_access_token(data={"sub": str(user.id), "phone": user.phone_number, "role": user.role.value})
         user_dto = UserResponseDTO(
             id=user.id,
             full_name=user.full_name,
@@ -124,6 +110,14 @@ class AuthService:
         db.commit()
         db.refresh(user)
         return UserResponseDTO.model_validate(user)
+
+    def delete_user_account(self, db: Session, user: User) -> dict:
+        db.delete(user)
+        db.commit()
+        return {
+            "status": "success",
+            "message": "আপনার অ্যাকাউন্টটি স্থায়ীভাবে মুছে ফেলা হয়েছে।"
+        }
 
     def forgot_password(self, db: Session, req: ForgotPasswordDTO) -> dict:
         user = user_repository.get_by_phone(db, req.phone_number)

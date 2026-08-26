@@ -4,10 +4,11 @@ import PageHeader from '../components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import StatusBadge from '../components/ui/StatusBadge';
 import { FormField, Input, Select } from '../components/ui/FormComponents';
-import { User, Shield, MapPin, CheckCircle2, Upload, AlertCircle, Navigation } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
+import { User, Shield, MapPin, CheckCircle2, Upload, AlertCircle, Navigation, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { currentUser, authToken, updateUser, openAuthModal } = useAuth();
+  const { currentUser, authToken, updateUser, logout, openAuthModal } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,6 +23,10 @@ export default function ProfilePage() {
   
   const [loading, setLoading] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteErrorMsg, setDeleteErrorMsg] = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -135,6 +140,34 @@ export default function ProfilePage() {
       setPhotoError('নেটওয়ার্ক ত্রুটি!');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccountConfirm = async () => {
+    if (!authToken) return;
+    setDeleteLoading(true);
+    setDeleteErrorMsg('');
+
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (res.ok) {
+        setIsDeleteModalOpen(false);
+        logout();
+        window.location.href = '/';
+      } else {
+        const data = await res.json();
+        setDeleteErrorMsg(data.detail || 'অ্যাকাউন্ট মুছে ফেলা সম্ভব হয়নি। পুনরায় চেষ্টা করুন।');
+      }
+    } catch (e) {
+      setDeleteErrorMsg('নেটওয়ার্ক ত্রুটি! পরে চেষ্টা করুন।');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -300,6 +333,84 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-rose-200 bg-rose-50/30">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-rose-700">
+            <Trash2 className="w-5 h-5 shrink-0" />
+            <CardTitle className="text-rose-900">অ্যাকাউন্ট অপসারণ (Delete Account)</CardTitle>
+          </div>
+          <CardDescription className="text-rose-700">
+            অ্যাকাউন্ট মুছে ফেললে আপনার সকল সংরক্ষিত আবেদন, অভিযোগ ও ব্যক্তিগত তথ্য স্থায়ীভাবে ডাটাবেজ থেকে মুছে যাবে।
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-3.5 bg-rose-100/60 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1">
+            <p className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>সতর্কতা: এটি একটি সংবেদনশীল ও স্থায়ী পদক্ষেপ!</span>
+            </p>
+            <p className="text-[11px] leading-relaxed">
+              অ্যাকাউন্ট ডিলিট করলে পুনরায় এই মোবাইল নম্বর দিয়ে লগইন করা সম্ভব হবে না। সকল ডাটা স্থায়ীভাবে মুছে যাবে।
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteErrorMsg('');
+              setIsDeleteModalOpen(true);
+            }}
+            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলুন</span>
+          </button>
+        </CardContent>
+      </Card>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="অ্যাকাউন্ট মুছে ফেলার চূড়ান্ত নিশ্চিতকরণ"
+      >
+        <div className="space-y-4 text-xs">
+          {deleteErrorMsg && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{deleteErrorMsg}</span>
+            </div>
+          )}
+
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-slate-700">
+            <p className="font-bold text-slate-900 text-sm">আপনি কি নিশ্চিত যে আপনার অ্যাকাউন্টটি মুছে ফেলতে চান?</p>
+            <p className="leading-relaxed">
+              অ্যাকাউন্ট মোছার ফলে পল্লীবন্ধু সিস্টেমে থাকা আপনার নাম (<span className="font-semibold">{currentUser.full_name}</span>), মোবাইল নম্বর (<span className="font-mono">{currentUser.phone_number}</span>), সেবার আবেদন ও অভিযোগসমূহ ডাটাবেজ থেকে মুছে ফেলা হবে।
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={deleteLoading}
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium text-xs rounded-lg transition-colors"
+            >
+              বাতিল করুন (Cancel)
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteAccountConfirm}
+              disabled={deleteLoading}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{deleteLoading ? 'মুছে ফেলা হচ্ছে...' : 'হ্যাঁ, অ্যাকাউন্ট মুছে ফেলুন'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
