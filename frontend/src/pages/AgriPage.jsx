@@ -30,11 +30,11 @@ export default function AgriPage() {
 
   const [marketPrices, setMarketPrices] = useState([]);
   const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [newCropName, setNewCropName] = useState('Mustard');
-  const [newCropNameBn, setNewCropNameBn] = useState('সরিষা');
-  const [newMarketName, setNewMarketName] = useState('ধামরাই হাট');
-  const [newDistrict, setNewDistrict] = useState('ঢাকা');
-  const [newPriceBdt, setNewPriceBdt] = useState(3200);
+  const [newCropName, setNewCropName] = useState('');
+  const [newCropNameBn, setNewCropNameBn] = useState('');
+  const [newMarketName, setNewMarketName] = useState('');
+  const [newDistrict, setNewDistrict] = useState('');
+  const [newPriceBdt, setNewPriceBdt] = useState('');
   const [priceUpdateMsg, setPriceUpdateMsg] = useState('');
 
   const [articles, setArticles] = useState([]);
@@ -110,6 +110,11 @@ export default function AgriPage() {
       const data = await res.json();
       if (res.ok) {
         setPriceUpdateMsg('কৃষি বাজারদর সফলভাবে আপডেট করা হয়েছে!');
+        setNewCropName('');
+        setNewCropNameBn('');
+        setNewMarketName('');
+        setNewDistrict('');
+        setNewPriceBdt('');
         fetchMarketPrices();
       } else {
         setPriceUpdateMsg(data.detail || 'বাজারদর আপডেট করা সম্ভব হয়নি।');
@@ -169,10 +174,24 @@ export default function AgriPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="কৃষি ও বাজার তথ্য কেন্দ্র"
-        description="ফসলের রোগ নির্ণয়, বাজারদর আপডেট, ঋণের সহজ কিস্তি হিসাব ও বিশেষজ্ঞ নির্দেশিকা"
-      />
+      <div className="relative rounded-2xl overflow-hidden shadow-card border border-emerald-900/20 bg-emerald-900 text-white min-h-[160px] flex items-center">
+        <img
+          src="https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&w=1200&q=80"
+          alt="Agriculture Crop Inspection Bangladesh"
+          className="absolute inset-0 w-full h-full object-cover opacity-25"
+          loading="lazy"
+        />
+        <div className="relative z-10 p-6 max-w-xl space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-800/80 text-emerald-100 border border-emerald-600/50 backdrop-blur-xs">
+            <Sprout className="w-3.5 h-3.5" />
+            <span>আধুনিক কৃষি ও ফসল নিরাপত্তা</span>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight">কৃষি ও বাজার তথ্য কেন্দ্র</h2>
+          <p className="text-xs text-emerald-100/90 leading-relaxed font-normal">
+            ফসলের রোগ নির্ণয়, অনুমোদিত চিকিৎসা, শস্য বাজারদর ও সহজ শর্তে কৃষি ঋণের ডিজিটাল হিসাব।
+          </p>
+        </div>
+      </div>
 
       <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-1">
         <button
@@ -244,7 +263,7 @@ export default function AgriPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {diseases.map((d) => (
-              <Card key={d.id} className="flex flex-col justify-between">
+              <Card key={d.id} className="flex flex-col justify-between overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-emerald-700">{d.disease_name_bn}</CardTitle>
                   <CardDescription>ফসল: {d.crop_name_bn} ({d.crop_name_en})</CardDescription>
@@ -342,19 +361,19 @@ export default function AgriPage() {
                 )}
                 <form onSubmit={handleOfficerPriceSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <FormField label="ফসলের নাম (বাংলা)">
-                    <Input value={newCropNameBn} onChange={(e) => setNewCropNameBn(e.target.value)} required />
+                    <Input value={newCropNameBn} onChange={(e) => setNewCropNameBn(e.target.value)} placeholder="সরিষা" required />
                   </FormField>
                   <FormField label="Crop Name (English)">
-                    <Input value={newCropName} onChange={(e) => setNewCropName(e.target.value)} required />
+                    <Input value={newCropName} onChange={(e) => setNewCropName(e.target.value)} placeholder="Mustard" required />
                   </FormField>
                   <FormField label="বাজার / হাট">
-                    <Input value={newMarketName} onChange={(e) => setNewMarketName(e.target.value)} required />
+                    <Input value={newMarketName} onChange={(e) => setNewMarketName(e.target.value)} placeholder="ধামরাই হাট" required />
                   </FormField>
                   <FormField label="জেলা">
-                    <Input value={newDistrict} onChange={(e) => setNewDistrict(e.target.value)} required />
+                    <Input value={newDistrict} onChange={(e) => setNewDistrict(e.target.value)} placeholder="ঢাকা" required />
                   </FormField>
                   <FormField label="মূল্য (টাকা / মন)">
-                    <Input type="number" value={newPriceBdt} onChange={(e) => setNewPriceBdt(e.target.value)} required />
+                    <Input type="number" value={newPriceBdt} onChange={(e) => setNewPriceBdt(e.target.value)} placeholder="3200" required />
                   </FormField>
                   <div className="flex items-end">
                     <button type="submit" className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm">

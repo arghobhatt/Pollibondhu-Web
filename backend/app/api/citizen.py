@@ -73,6 +73,10 @@ def get_notifications(db: Session = Depends(get_db), current_user: User = Depend
 def mark_read(notification_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return citizen_service.mark_notification_read(db, current_user, notification_id)
 
+@router.put("/api/notifications/read-all")
+def mark_all_read(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    return citizen_service.mark_all_notifications_read(db, current_user)
+
 @router.get("/api/citizens/stats", response_model=CitizenStatsDTO)
 def get_citizen_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     return citizen_service.get_citizen_stats(db, current_user)

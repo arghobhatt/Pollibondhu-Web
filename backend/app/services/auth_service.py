@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.orm import User, UserRole
-from app.schemas.auth import UserRegisterDTO, UserLoginDTO, TokenResponseDTO, UserResponseDTO, ForgotPasswordDTO, ResetPasswordDTO
+from app.schemas.auth import UserRegisterDTO, UserLoginDTO, TokenResponseDTO, UserResponseDTO, ForgotPasswordDTO, ResetPasswordDTO, UserProfileUpdateDTO
 from app.core.security import hash_password, verify_password, create_access_token
 from app.repositories.user_repository import user_repository
 
@@ -91,11 +91,28 @@ class AuthService:
         )
         return TokenResponseDTO(access_token=access_token, token_type="bearer", user=user_dto)
 
+    def update_user_profile(self, db: Session, user: User, req: UserProfileUpdateDTO) -> UserResponseDTO:
+        if req.full_name is not None:
+            user.full_name = req.full_name
+        if req.email is not None:
+            user.email = req.email
+        if req.nid_number is not None:
+            user.nid_number = req.nid_number
+        if req.division is not None:
+            user.division = req.division
+        if req.district is not None:
+            user.district = req.district
+        if req.upazila is not None:
+            user.upazila = req.upazila
+        db.commit()
+        db.refresh(user)
+        return UserResponseDTO.model_validate(user)
+
     def forgot_password(self, db: Session, req: ForgotPasswordDTO) -> dict:
         user = user_repository.get_by_phone(db, req.phone_number)
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_444_NOT_FOUND if hasattr(status, 'HTTP_444_NOT_FOUND') else status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="User account with this phone number was not found."
             )
         return {

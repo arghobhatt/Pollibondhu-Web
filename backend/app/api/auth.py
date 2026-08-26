@@ -8,7 +8,8 @@ from app.schemas.auth import (
     TokenResponseDTO,
     UserResponseDTO,
     ForgotPasswordDTO,
-    ResetPasswordDTO
+    ResetPasswordDTO,
+    UserProfileUpdateDTO
 )
 from app.services.auth_service import auth_service
 from app.api.deps import get_current_active_user
@@ -33,6 +34,10 @@ def logout(current_user: User = Depends(get_current_active_user)):
 @router.get("/me", response_model=UserResponseDTO)
 def get_me(current_user: User = Depends(get_current_active_user)):
     return UserResponseDTO.model_validate(current_user)
+
+@router.put("/me", response_model=UserResponseDTO)
+def update_me(req: UserProfileUpdateDTO, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    return auth_service.update_user_profile(db, current_user, req)
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordDTO, db: Session = Depends(get_db)):

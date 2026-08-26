@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../co
 import { NotificationItem } from '../components/ui/NotificationItem';
 import { EmptyState } from '../components/ui/EmptyState';
 import { FormField, Input, Select, Textarea } from '../components/ui/FormComponents';
-import { Bell, Send } from 'lucide-react';
+import { Bell, Send, CheckCheck } from 'lucide-react';
 
 export default function NotificationsPage() {
   const { currentUser, authToken, openAuthModal } = useAuth();
@@ -42,6 +42,17 @@ export default function NotificationsPage() {
     } catch (e) {}
   };
 
+  const handleMarkAllRead = async () => {
+    if (!authToken) return;
+    try {
+      await fetch('/api/notifications/read-all', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      fetchNotifications();
+    } catch (e) {}
+  };
+
   const handleSendNotification = async (e) => {
     e.preventDefault();
     try {
@@ -62,6 +73,18 @@ export default function NotificationsPage() {
       <PageHeader
         title="নাগরিক নোটিফিকেশন ইনবক্স"
         description="এসএমএস, ইমেইল ও মোবাইল অ্যাপের ডিজিটাল আপডেট বার্তা"
+        action={
+          notifications.some(n => !n.is_read) ? (
+            <button
+              onClick={handleMarkAllRead}
+              type="button"
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <CheckCheck className="w-4 h-4" />
+              <span>সব পড়া হয়েছে চিহ্নিত করুন</span>
+            </button>
+          ) : null
+        }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

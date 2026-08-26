@@ -16,6 +16,7 @@ import CommunityPage from './pages/CommunityPage';
 import MyApplicationsPage from './pages/MyApplicationsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import OfficerDashboardPage from './pages/OfficerDashboardPage';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="my-applications" element={<MyApplicationsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="officer" element={<OfficerDashboardPage />} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route path="*" element={<DashboardPage />} />
           </Route>
         </Routes>

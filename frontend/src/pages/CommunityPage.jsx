@@ -6,7 +6,7 @@ import { Modal } from '../components/ui/Modal';
 import { LoadingState } from '../components/ui/LoadingState';
 import { EmptyState } from '../components/ui/EmptyState';
 import { FormField, Input, Select, Textarea } from '../components/ui/FormComponents';
-import { MessageSquare, GraduationCap, Plus, Eye, Play, User } from 'lucide-react';
+import { MessageSquare, GraduationCap, Plus, Eye, Play, User, Users } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 
 export default function CommunityPage() {
@@ -89,55 +89,70 @@ export default function CommunityPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="ফোরাম ও ডিজিটাল প্রশিক্ষণ কেন্দ্র"
-        description="কৃষক ফোরামে পরামর্শ বিনিময় এবং আধুনিক কৃষি প্রযুক্তির ভিডিও টিউটোরিয়াল"
-        action={
-          activeTab === 'forum' ? (
-            <button
-              onClick={() => {
-                if (!authToken) openAuthModal('login');
-                else setIsNewPostModalOpen(true);
-              }}
-              type="button"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>নতুন পোস্ট লিখুন</span>
-            </button>
-          ) : null
-        }
-      />
+      <div className="relative rounded-2xl overflow-hidden shadow-card border border-emerald-900/20 bg-emerald-900 text-white min-h-[160px] flex items-center">
+        <img
+          src="https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1200&q=80"
+          alt="Bangladesh Rural Farmers Community"
+          className="absolute inset-0 w-full h-full object-cover opacity-25"
+          loading="lazy"
+        />
+        <div className="relative z-10 p-6 max-w-xl space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-800/80 text-emerald-100 border border-emerald-600/50 backdrop-blur-xs">
+            <Users className="w-3.5 h-3.5" />
+            <span>গ্রামীণ কৃষক কমিউনিটি ও দক্ষতা উন্নয়ন</span>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight">ফোরাম ও ডিজিটাল প্রশিক্ষণ কেন্দ্র</h2>
+          <p className="text-xs text-emerald-100/90 leading-relaxed font-normal">
+            অভিজ্ঞ কৃষকদের অভিজ্ঞতা বিনিময়, নতুন প্রযুক্তি প্রশিক্ষণ ও বিনামূল্যে কৃষি ভিডিও কোর্স।
+          </p>
+        </div>
+      </div>
 
-      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => setActiveTab('forum')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-            activeTab === 'forum'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4 text-emerald-600" />
-          <span>কৃষক ফোরাম</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('training')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-            activeTab === 'training'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <GraduationCap className="w-4 h-4 text-emerald-600" />
-          <span>ডিজিটাল প্রশিক্ষণ</span>
-        </button>
+      <div className="flex items-center justify-between">
+        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveTab('forum')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              activeTab === 'forum'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 text-emerald-600" />
+            <span>কৃষক ফোরাম</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('training')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              activeTab === 'training'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-emerald-600" />
+            <span>ডিজিটাল প্রশিক্ষণ</span>
+          </button>
+        </div>
+
+        {activeTab === 'forum' && (
+          <button
+            onClick={() => {
+              if (!authToken) openAuthModal('login');
+              else setIsNewPostModalOpen(true);
+            }}
+            type="button"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>নতুন পোস্ট লিখুন</span>
+          </button>
+        )}
       </div>
 
       {activeTab === 'forum' && (
         <div className="space-y-4">
           {loading ? (
-            <LoadingSpinner message="ফোরাম আলোচনা লোড হচ্ছে..." />
+            <LoadingState message="ফোরাম আলোচনা লোড হচ্ছে..." />
           ) : forumPosts.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
@@ -263,7 +278,7 @@ export default function CommunityPage() {
           <div className="space-y-4 text-xs">
             <p className="text-slate-600 leading-relaxed font-normal">{selectedCourse.description_bn}</p>
 
-            {selectedCourse.video_url && (
+            {selectedCourse.video_url ? (
               <a
                 href={selectedCourse.video_url}
                 target="_blank"
@@ -273,6 +288,10 @@ export default function CommunityPage() {
                 <Play className="w-4 h-4 fill-current" />
                 <span>টিউটোরিয়াল ভিডিও দেখুন ({selectedCourse.duration_hours} ঘণ্টা)</span>
               </a>
+            ) : (
+              <p className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 text-center">
+                এই কোর্সের ভিডিও লেকচার শীঘ্রই আপলোড করা হবে।
+              </p>
             )}
           </div>
         )}

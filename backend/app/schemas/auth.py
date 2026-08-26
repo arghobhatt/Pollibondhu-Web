@@ -31,6 +31,14 @@ class UserResponseDTO(BaseModel):
     class Config:
         from_attributes = True
 
+class UserProfileUpdateDTO(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    nid_number: Optional[str] = None
+    division: Optional[str] = None
+    district: Optional[str] = None
+    upazila: Optional[str] = None
+
 class TokenResponseDTO(BaseModel):
     access_token: str
     token_type: str = "bearer"

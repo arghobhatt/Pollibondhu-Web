@@ -14,7 +14,8 @@ import {
   MessageSquare, 
   FileText, 
   ShieldAlert,
-  Bell
+  Bell,
+  User
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -36,7 +37,8 @@ export default function Sidebar() {
   if (currentUser) {
     mainNavItems.push(
       { path: '/my-applications', label: 'আমার আবেদনসমূহ', icon: FileText },
-      { path: '/notifications', label: 'নোটিফিকেশন', icon: Bell }
+      { path: '/notifications', label: 'নোটিফিকেশন', icon: Bell },
+      { path: '/profile', label: 'আমার প্রোফাইল', icon: User }
     );
   }
 

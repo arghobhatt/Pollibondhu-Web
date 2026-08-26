@@ -4,63 +4,41 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [authToken, setAuthToken] = useState(() => localStorage.getItem('pollibondhu_token') || '');
+  const [authToken, setAuthToken] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState('login');
-  const [loadingAuth, setLoadingAuth] = useState(true);
-
-  const fetchCurrentUser = async (token) => {
-    if (!token) {
-      setCurrentUser(null);
-      setLoadingAuth(false);
-      return;
-    }
-    try {
-      const res = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const user = await res.json();
-        setCurrentUser(user);
-      } else {
-        localStorage.removeItem('pollibondhu_token');
-        setAuthToken('');
-        setCurrentUser(null);
-      }
-    } catch (e) {
-      console.error("Auth fetch error:", e);
-    } finally {
-      setLoadingAuth(false);
-    }
-  };
 
   useEffect(() => {
-    if (authToken) {
-      fetchCurrentUser(authToken);
-    } else {
-      setLoadingAuth(false);
+    const storedToken = localStorage.getItem('pollibondhu_token');
+    const storedUser = localStorage.getItem('pollibondhu_user');
+    if (storedToken && storedUser) {
+      setAuthToken(storedToken);
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch (e) {
+        localStorage.removeItem('pollibondhu_user');
+      }
     }
-  }, [authToken]);
+  }, []);
 
   const login = (user, token) => {
-    localStorage.setItem('pollibondhu_token', token);
-    setAuthToken(token);
     setCurrentUser(user);
+    setAuthToken(token);
+    localStorage.setItem('pollibondhu_token', token);
+    localStorage.setItem('pollibondhu_user', JSON.stringify(user));
     setIsAuthModalOpen(false);
   };
 
-  const logout = async () => {
-    if (authToken) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-      } catch (e) {}
-    }
-    localStorage.removeItem('pollibondhu_token');
-    setAuthToken('');
+  const logout = () => {
     setCurrentUser(null);
+    setAuthToken(null);
+    localStorage.removeItem('pollibondhu_token');
+    localStorage.removeItem('pollibondhu_user');
+  };
+
+  const updateUser = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('pollibondhu_user', JSON.stringify(updatedUser));
   };
 
   const openAuthModal = (tab = 'login') => {
@@ -72,7 +50,7 @@ export function AuthProvider({ children }) {
     setIsAuthModalOpen(false);
   };
 
-  const isOfficer = currentUser && (currentUser.role === 'officer' || currentUser.role === 'admin');
+  const isOfficer = currentUser?.role === 'officer' || currentUser?.role === 'admin';
 
   return (
     <AuthContext.Provider
@@ -80,14 +58,13 @@ export function AuthProvider({ children }) {
         currentUser,
         authToken,
         isOfficer,
-        loadingAuth,
-        isAuthModalOpen,
-        authModalTab,
         login,
         logout,
+        updateUser,
+        isAuthModalOpen,
+        authModalTab,
         openAuthModal,
-        closeAuthModal,
-        fetchCurrentUser
+        closeAuthModal
       }}
     >
       {children}
@@ -96,9 +73,5 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }

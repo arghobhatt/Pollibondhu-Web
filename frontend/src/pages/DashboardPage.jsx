@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/layout/PageHeader';
 import StatCard from '../components/ui/StatCard';
-import ServiceCard from '../components/ui/ServiceCard';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { LoadingState } from '../components/ui/LoadingState';
 import { 
@@ -16,17 +15,19 @@ import {
   Send, 
   Calculator, 
   Megaphone, 
-  Zap, 
-  PhoneCall, 
-  MessageSquare,
-  CheckCircle2
+  PhoneCall,
+  Clock,
+  CheckCircle2,
+  Bookmark,
+  Bell
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
-  const { currentUser, openAuthModal } = useAuth();
+  const { currentUser, authToken, openAuthModal } = useAuth();
   
   const [dashboardData, setDashboardData] = useState(null);
+  const [citizenStats, setCitizenStats] = useState(null);
   const [weatherCity, setWeatherCity] = useState('ঢাকা');
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,16 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchCitizenStats = async () => {
+    if (!authToken) return;
+    try {
+      const res = await fetch('/api/citizens/stats', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) setCitizenStats(await res.json());
+    } catch (e) {}
+  };
+
   const fetchWeather = async () => {
     try {
       const res = await fetch(`/api/weather?city=${encodeURIComponent(weatherCity)}`);
@@ -57,7 +68,8 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboard();
     fetchWeather();
-  }, [weatherCity]);
+    if (authToken) fetchCitizenStats();
+  }, [weatherCity, authToken]);
 
   const handleCalculateLoan = async (e) => {
     e.preventDefault();
@@ -82,17 +94,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-xl p-6 md:p-8 text-white shadow-card">
-        <div className="max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-700/50 text-emerald-100 border border-emerald-600/50">
+      <div className="relative rounded-2xl overflow-hidden shadow-card border border-emerald-900/20 bg-emerald-900 text-white min-h-[220px] flex items-center">
+        <img
+          src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=80"
+          alt="Bangladesh Agriculture Rice Field"
+          className="absolute inset-0 w-full h-full object-cover opacity-25"
+          loading="lazy"
+        />
+        <div className="relative z-10 p-6 md:p-8 max-w-2xl space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-800/80 text-emerald-100 border border-emerald-600/50 backdrop-blur-xs">
             <Sprout className="w-3.5 h-3.5" />
-            <span>সমন্বিত নাগরিক ও কৃষি প্ল্যাটফর্ম</span>
+            <span>স্মার্ট গ্রামীণ সেবা প্ল্যাটফর্ম</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            স্বাগতম পল্লীবন্ধু ডিজিটাল ড্যাশবোর্ডে
+            স্বাগতম পল্লীবন্ধু ডিজিটাল পোর্টালে
           </h1>
           <p className="text-xs md:text-sm text-emerald-100/90 leading-relaxed font-normal">
-            কৃষি সার, আবহাওয়া পূর্বাভাস, স্মার্ট ঋণ হিসাব, নাগরিক সেবা ও সরাসরি সরকারি সহায়তার সমন্বিত ডিজিটাল সমাধান।
+            কৃষি সার, আবহাওয়া পূর্বাভাস, স্মার্ট ঋণ হিসাব, নাগরিক সেবা ও সরাসরি সরকারি সহায়তার সমন্বিত সমাধান।
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -116,13 +134,22 @@ export default function DashboardPage() {
             )}
             <Link
               to="/tracking"
-              className="px-4 py-2 bg-emerald-700/60 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs border border-emerald-600/60 transition-colors"
+              className="px-4 py-2 bg-emerald-700/80 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs border border-emerald-600/60 transition-colors backdrop-blur-xs"
             >
               আবেদন ট্র্যাকিং
             </Link>
           </div>
         </div>
       </div>
+
+      {currentUser && citizenStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard title="মোট দাখিলকৃত আবেদন" value={citizenStats.total_applications} icon={FileText} color="emerald" />
+          <StatCard title="প্রক্রিয়াধীন সেবা" value={citizenStats.pending_applications} icon={Clock} color="amber" />
+          <StatCard title="বুকমার্ককৃত প্রিয় সেবা" value={citizenStats.saved_services_count} icon={Bookmark} color="cyan" />
+          <StatCard title="অপঠিত নোটিফিকেশন" value={citizenStats.unread_notifications_count} icon={Bell} color="rose" />
+        </div>
+      )}
 
       {dashboardData && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -136,7 +163,7 @@ export default function DashboardPage() {
 
           <StatCard
             title="আমন ধান বাজারদর"
-            value={`${dashboardData.market_prices[0]?.price_bdt || 0} ৳`}
+            value={`${dashboardData.market_prices[0]?.price_bdt_per_mon || 3200} ৳`}
             subtitle={`প্রতি মন | ${dashboardData.market_prices[0]?.district || 'জেলা'}`}
             icon={TrendingUp}
             color="emerald"

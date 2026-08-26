@@ -42,10 +42,24 @@ export default function EmergencyPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="জরুরি সেবা ও হেল্পলাইন"
-        description="এক ক্লিকে সরাসরি জাতীয় জরুরি সেবায় যোগাযোগের হটলাইন ও স্থানীয় জরুরি নম্বরসমূহ"
-      />
+      <div className="relative rounded-2xl overflow-hidden shadow-card border border-rose-900/20 bg-rose-900 text-white min-h-[150px] flex items-center">
+        <img
+          src="https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80"
+          alt="Emergency Support Hotline Bangladesh"
+          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          loading="lazy"
+        />
+        <div className="relative z-10 p-6 max-w-xl space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-800/80 text-rose-100 border border-rose-600/50 backdrop-blur-xs">
+            <PhoneCall className="w-3.5 h-3.5" />
+            <span>জরুরি সহায়তা ও নিরাপত্তা হটলাইন</span>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight">জরুরি সেবা ও হেল্পলাইন ডিরেক্টরি</h2>
+          <p className="text-xs text-rose-100/90 leading-relaxed font-normal">
+            এক ক্লিকে সরাসরি জাতীয় জরুরি সেবা, কৃষি কল সেন্টার ও স্থানীয় সরকারি কর্মকর্তাদের হটলাইন নম্বর।
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <a
@@ -104,7 +118,7 @@ export default function EmergencyPage() {
             onClick={() => handleCategorySelect(c.id)}
             className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               selectedCategory === c.id
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                ? 'bg-rose-50 text-rose-700 border border-rose-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
@@ -114,7 +128,7 @@ export default function EmergencyPage() {
       </div>
 
       {loading ? (
-        <LoadingSpinner message="জরুরি কন্টাক্ট নম্বরসমূহ লোড হচ্ছে..." />
+        <LoadingState message="জরুরি কন্টাক্ট নম্বরসমূহ লোড হচ্ছে..." />
       ) : contacts.length === 0 ? (
         <EmptyState
           icon={PhoneCall}

@@ -238,6 +238,11 @@ class CitizenService:
             db.commit()
         return {"status": "success", "message": "Notification marked as read"}
 
+    def mark_all_notifications_read(self, db: Session, user: User) -> dict:
+        db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).update({"is_read": True})
+        db.commit()
+        return {"status": "success", "message": "All notifications marked as read"}
+
     def get_citizen_stats(self, db: Session, user: User) -> CitizenStatsDTO:
         apps = db.query(ServiceApplication).filter(ServiceApplication.user_id == user.id).all()
         total_apps = len(apps)

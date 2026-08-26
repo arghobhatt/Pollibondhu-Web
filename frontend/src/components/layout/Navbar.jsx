@@ -66,7 +66,10 @@ export default function Navbar({ onMobileMenuToggle }) {
 
         {currentUser ? (
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <div className="hidden sm:flex flex-col text-right">
+            <Link
+              to="/profile"
+              className="hidden sm:flex flex-col text-right hover:text-emerald-700 transition-colors"
+            >
               <span className="text-xs font-semibold text-slate-900 flex items-center gap-1 justify-end">
                 <User className="w-3 h-3 text-emerald-600" />
                 {currentUser.full_name}
@@ -75,7 +78,7 @@ export default function Navbar({ onMobileMenuToggle }) {
                 <Shield className="w-2.5 h-2.5 text-slate-400" />
                 {currentUser.role === 'officer' ? 'উপসহকারী কৃষি কর্মকর্তা' : 'নাগরিক'}
               </span>
-            </div>
+            </Link>
             <button
               onClick={logout}
               type="button"
