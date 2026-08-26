@@ -136,12 +136,15 @@ def init_db(db: Session = None):
             db.add_all(articles)
             db.commit()
 
-        if db.query(TransportRoute).count() == 0:
+        if db.query(TransportRoute).count() < 6:
+            db.query(TransportRoute).delete()
             route1 = TransportRoute(route_code="ROUTE-DHAMRAI-GABTOLI", origin_bn="ধামরাই", destination_bn="গাবতলী (ঢাকা)", distance_km=38.5, estimated_duration_minutes=75, vehicle_type="bus", operator_name_bn="ধামরাই এক্সপ্রেস ও ডি-লিংক", fare_bdt=95.0)
             route2 = TransportRoute(route_code="ROUTE-SAVAR-MANIKGANJ", origin_bn="সাভার", destination_bn="মানিকগঞ্জ", distance_km=42.0, estimated_duration_minutes=80, vehicle_type="bus", operator_name_bn="শুভযাত্রা পরিবহন", fare_bdt=110.0)
             route3 = TransportRoute(route_code="ROUTE-SADARGHAT-BARISHAL", origin_bn="ঢাকা (সদরঘাট)", destination_bn="বরিশাল লঞ্চ টার্মিনাল", distance_km=180.0, estimated_duration_minutes=360, vehicle_type="launch", operator_name_bn="সুন্দরবন ও সুরভী নেভিগেশন", fare_bdt=350.0)
             route4 = TransportRoute(route_code="ROUTE-DHAKA-RAJSHAHI-TRAIN", origin_bn="ঢাকা (কমলাপুর)", destination_bn="রাজশাহী স্টেশন", distance_km=250.0, estimated_duration_minutes=300, vehicle_type="train", operator_name_bn="বনলতা এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=420.0)
-            db.add_all([route1, route2, route3, route4])
+            route5 = TransportRoute(route_code="ROUTE-DHAMRAI-LOCAL-AUTO", origin_bn="ধামরাই বাজার", destination_bn="কাওয়ালতিয়া ইউনিয়ন", distance_km=12.0, estimated_duration_minutes=25, vehicle_type="auto", operator_name_bn="লোকাল ইজি-বাইক সমিতি", fare_bdt=30.0)
+            route6 = TransportRoute(route_code="ROUTE-CHATTOGRAM-COXBAZAR", origin_bn="চট্টগ্রাম (অলংকার)", destination_bn="কক্সবাজার টার্মিনাল", distance_km=150.0, estimated_duration_minutes=240, vehicle_type="bus", operator_name_bn="মার্শা ও শ্যামলী পরিবহন", fare_bdt=380.0)
+            db.add_all([route1, route2, route3, route4, route5, route6])
             db.commit()
 
             schedules = [
@@ -149,7 +152,9 @@ def init_db(db: Session = None):
                 TransportSchedule(route_id=route1.id, departure_time="০৯:০০ AM", arrival_time="১০:১৫ AM", days_of_week="দৈনিক (Daily)"),
                 TransportSchedule(route_id=route2.id, departure_time="০৭:০০ AM", arrival_time="০৮:২০ AM", days_of_week="দৈনিক (Daily)"),
                 TransportSchedule(route_id=route3.id, departure_time="০৮:৩০ PM", arrival_time="০৪:৩০ AM", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route4.id, departure_time="০৬:০০ AM", arrival_time="১১:০০ AM", days_of_week="শুক্রবার ব্যতীত (Daily except Fri)")
+                TransportSchedule(route_id=route4.id, departure_time="০৬:০০ AM", arrival_time="১১:০০ AM", days_of_week="শুক্রবার ব্যতীত (Daily except Fri)"),
+                TransportSchedule(route_id=route5.id, departure_time="প্রতি ১৫ মিনিট পর", arrival_time="২৫ মিনিট পর", days_of_week="দৈনিক (Daily)"),
+                TransportSchedule(route_id=route6.id, departure_time="০৭:৩০ AM", arrival_time="১১:৩০ AM", days_of_week="দৈনিক (Daily)")
             ]
             db.add_all(schedules)
             db.commit()
@@ -166,10 +171,19 @@ def init_db(db: Session = None):
             db.add_all(contacts)
             db.commit()
 
-        if db.query(ForumPost).count() == 0 and farmer:
+        if db.query(ForumPost).count() < 10 and farmer:
+            db.query(ForumPost).delete()
             posts = [
                 ForumPost(user_id=farmer.id, author_name=farmer.full_name, title="আমন ধানের ফলন বৃদ্ধিতে লাল পোকা দমন করার সহজ উপায় কী?", category="কৃষি পরামর্শ", content="আমাদের ধামরাই ব্লকে নতুন ধান গাছে লাল পোকার আক্রমণ দেখা দিয়েছে। জৈব উপায়ে কীভাবে এটি দমন করা সম্ভব?", views_count=42),
-                ForumPost(user_id=farmer.id, author_name=farmer.full_name, title="উপজেলা কৃষি অফিস থেকে পাওয়ার টিলার অনুদানের নিয়ম জানতে চাই", category="সাধারণ প্রশ্ন", content="কৃষি যন্ত্রপাতি ৫০% অনুদানে পেতে হলে প্রয়োজনীয় কাগজপত্র ও কৃষক দলের নিয়মসমূহ কি কি?", views_count=18)
+                ForumPost(user_id=farmer.id, author_name=farmer.full_name, title="উপজেলা কৃষি অফিস থেকে পাওয়ার টিলার অনুদানের নিয়ম জানতে চাই", category="সাধারণ প্রশ্ন", content="কৃষি যন্ত্রপাতি ৫০% অনুদানে পেতে হলে প্রয়োজনীয় কাগজপত্র ও কৃষক দলের নিয়মসমূহ কি কি?", views_count=18),
+                ForumPost(user_id=farmer.id, author_name="মোছাম্মৎ রহিমা খাতুন (মহিলা কৃষক)", title="শীতকালীন বেগুন ও টমেটোতে জৈব বালাইনাশক নিম নির্যাস তৈরির নিয়ম", category="জৈব কৃষি", content="রাসায়নিক বিষ না ছিটিয়ে বাড়িতে নিম পাতা ও সাবান পানি দিয়ে কীভাবে পোকা দমন করা যায়?", views_count=65),
+                ForumPost(user_id=farmer.id, author_name="মোঃ শফিকুল ইসলাম (মৎস্য চাষী)", title="পুকুরে মাছের লাল রানিং রোগ ও পানি শোধন পদ্ধতি", category="মৎস্য চাষ", content="পুকুরের পানিতে চুন ও পটাশ সারের সঠিক মাত্রা প্রয়োগ করার নিয়ম জানতে চাই।", views_count=39),
+                ForumPost(user_id=farmer.id, author_name="কৃষিবিদ মোঃ জহিরুল ইসলাম", title="বোরো ধান রোপণের আগে জমি তৈরিতে দস্তা সারের প্রয়োজনীয়তা", category="মাটি ও সার", content="দস্তার অভাবে ধানের খাটো রোগ হয়। প্রতি শতকে ২০ গ্রাম দস্তা সার প্রয়োগের সুফল।", views_count=88),
+                ForumPost(user_id=farmer.id, author_name="আব্দুর রাজ্জাক (নরসিংদী)", title="সবরি ও মিছরি কলা বাগান তৈরিতে আধুনিক চারা নির্বাচন", category="ফল চাষ", content="টিস্যু কালচার চারায় দ্রুত ফলন পাওয়া যায় এবং রোগ আক্রমণ কম হয়।", views_count=52),
+                ForumPost(user_id=farmer.id, author_name="জসিম উদ্দিন (রংপুর)", title="আলু সংরক্ষণে প্রাকৃতিক হিমঘর ও আধুনিক সেড তৈরি পদ্ধতি", category="শস্য সংরক্ষণ", content="হিমঘরে আলু রাখার আগে ছায়াযুক্ত স্থানে বাতাসে শুকিয়ে নেয়া জরুরী।", views_count=71),
+                ForumPost(user_id=farmer.id, author_name="সোহেল রানা (যশোর)", title="তোষা পাট ধোলাই ও পচানোর জন্য রিফন পদ্ধতি ব্যবহার", category="পাট চাষ", content="কম পানিতে পাট পচাতে রিবনার মেশিন ও ব্যাকটেরিয়া কালচার ব্যবহারে আঁশের উজ্জ্বলতা বাড়ে।", views_count=29),
+                ForumPost(user_id=farmer.id, author_name="আমির হোসেন (পাবনা)", title="দেশি পেঁয়াজ সংরক্ষণে কিউরিং ও বাতাস চলাচলের শেলফ গাইড", category="পেঁয়াজ চাষ", content="পেঁয়াজ তোলার পর ৭ দিন বাতাসে শুকিয়ে বাঁশের মাচায় রাখলে পচন ধরে না।", views_count=94),
+                ForumPost(user_id=farmer.id, author_name="আনোয়ার পারভেজ (বগুড়া)", title="উপজেলা কৃষি অফিসে স্মার্ট কৃষক কার্ড কার্ড নিবন্ধনের নিয়মাবলী", category="সরকারি সেবা", content="NID ও ২ কপি ছবি নিয়ে নিকটস্থ ইউনিয়ন ডিজিটাল সেন্টারে ফ্রিতে নিবন্ধন করা যায়।", views_count=110)
             ]
             db.add_all(posts)
             db.commit()

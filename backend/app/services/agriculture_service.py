@@ -24,8 +24,10 @@ from app.services.loans.calculator import LoanCalculatorContext
 from app.services.events.publisher import application_event_publisher
 
 class AgricultureService:
-    def get_market_prices(self, db: Session, district: Optional[str] = None) -> List[MarketPriceDTO]:
+    def get_market_prices(self, db: Session, district: Optional[str] = None, division: Optional[str] = None) -> List[MarketPriceDTO]:
         query = db.query(CropMarketPrice)
+        if division and division.strip():
+            query = query.filter(CropMarketPrice.division.ilike(f"%{division.strip()}%"))
         if district and district.strip():
             query = query.filter(CropMarketPrice.district.ilike(f"%{district.strip()}%"))
         prices = query.order_by(CropMarketPrice.updated_at.desc()).all()
@@ -40,6 +42,8 @@ class AgricultureService:
 
         if existing:
             existing.price_bdt_per_mon = req.price_bdt_per_mon
+            if req.division:
+                existing.division = req.division
             existing.reported_by_id = officer.id
             db.commit()
             db.refresh(existing)
@@ -50,6 +54,7 @@ class AgricultureService:
             crop_name_bn=req.crop_name_bn,
             market_name=req.market_name,
             district=req.district,
+            division=req.division or "ঢাকা",
             price_bdt_per_mon=req.price_bdt_per_mon,
             reported_by_id=officer.id
         )
@@ -63,7 +68,8 @@ class AgricultureService:
         if crop_name and crop_name.strip():
             query = query.filter(
                 (CropDisease.crop_name_bn.ilike(f"%{crop_name.strip()}%")) |
-                (CropDisease.crop_name_en.ilike(f"%{crop_name.strip()}%"))
+                (CropDisease.crop_name_en.ilike(f"%{crop_name.strip()}%")) |
+                (CropDisease.disease_name_bn.ilike(f"%{crop_name.strip()}%"))
             )
         diseases = query.all()
         return [CropDiseaseDTO.model_validate(d) for d in diseases]
@@ -71,7 +77,7 @@ class AgricultureService:
     def get_disease_by_id(self, db: Session, disease_id: int) -> CropDiseaseDTO:
         disease = db.query(CropDisease).filter(CropDisease.id == disease_id).first()
         if not disease:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Disease record not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Crop disease details not found")
         return CropDiseaseDTO.model_validate(disease)
 
     def get_articles(self, db: Session, category: Optional[str] = None) -> List[AgriArticleDTO]:
@@ -82,55 +88,54 @@ class AgricultureService:
         return [AgriArticleDTO.model_validate(a) for a in articles]
 
     async def apply_for_agri_loan(self, db: Session, user: User, req: AgriLoanApplicationCreateDTO) -> AgriLoanApplicationResponseDTO:
-        calculator = LoanCalculatorContext()
-        calculator.set_strategy_by_name(req.scheme_type)
-        calc_result = calculator.calculate(
+        calc_context = LoanCalculatorContext(req.scheme_type)
+        calc_result = calc_context.calculate(
             principal=req.principal_amount,
             annual_rate=req.annual_interest_rate,
             duration_months=req.duration_months
         )
 
-        app_num = f"APP-2026-{random.randint(1000, 9999)}"
-        officer = db.query(User).filter(User.role == "officer").first()
+        app_num = f"LOAN-2026-{random.randint(1000, 9999)}"
+        officer = db.query(User).filter(User.role == UserRole.OFFICER).first()
         officer_id = officer.id if officer else None
 
         service_app = ServiceApplication(
             application_number=app_num,
             user_id=user.id,
             service_type="agri_loan",
-            sub_service_name=f"কৃষি ঋণ ({calc_result.scheme_type})",
+            sub_service_name=f"কৃষি ঋণ ({req.scheme_type})",
             status=ApplicationStatus.PENDING,
             applicant_name=req.applicant_name or user.full_name,
             applicant_phone=req.applicant_phone or user.phone_number,
-            assigned_officer_id=officer_id,
-            remarks=f"ঋণ আবেদন পরিমাণ: {req.principal_amount} ৳ | স্কিম: {calc_result.scheme_type}"
+            remarks=f"ঋণের পরিমাণ: {req.principal_amount} BDT, মেয়াাদ: {req.duration_months} মাস",
+            assigned_officer_id=officer_id
         )
         db.add(service_app)
         db.commit()
         db.refresh(service_app)
 
-        loan_record = LoanApplication(
+        loan_rec = LoanApplication(
             application_id=service_app.id,
             user_id=user.id,
             scheme_type=req.scheme_type,
             principal_amount=req.principal_amount,
             annual_interest_rate=req.annual_interest_rate,
             duration_months=req.duration_months,
-            total_repayment=calc_result.total_repayment,
-            total_interest=calc_result.total_interest,
+            total_repayment=calc_result["total_repayment"],
+            total_interest=calc_result["total_interest"],
             status="Pending"
         )
-        db.add(loan_record)
+        db.add(loan_rec)
 
-        audit_entry = AuditLog(
+        initial_audit = AuditLog(
             application_id=service_app.id,
             action="Submitted",
             old_status=None,
             new_status=ApplicationStatus.PENDING.value,
             performed_by=user.full_name,
-            remarks=f"কৃষি ঋণের আবেদন দাখিল করা হয়েছে (মোট পরিশোধযোগ্য: {calc_result.total_repayment} ৳)"
+            remarks="কৃষি ঋণ ক্যালকুলেটর থেকে সরাসরি আবেদন জমা করা হয়েছে"
         )
-        db.add(audit_entry)
+        db.add(initial_audit)
         db.commit()
 
         await application_event_publisher.notify_status_change(
@@ -141,14 +146,14 @@ class AgricultureService:
         )
 
         return AgriLoanApplicationResponseDTO(
-            id=loan_record.id,
+            id=loan_rec.id,
             application_number=app_num,
-            scheme_type=calc_result.scheme_type,
+            scheme_type=req.scheme_type,
             principal_amount=req.principal_amount,
-            total_repayment=calc_result.total_repayment,
-            total_interest=calc_result.total_interest,
-            status="Pending",
-            created_at=service_app.created_at
+            total_repayment=calc_result["total_repayment"],
+            total_interest=calc_result["total_interest"],
+            status=loan_rec.status,
+            created_at=loan_rec.created_at
         )
 
 agriculture_service = AgricultureService()

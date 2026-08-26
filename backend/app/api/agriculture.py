@@ -17,8 +17,12 @@ from app.services.agriculture_service import agriculture_service
 router = APIRouter(prefix="/api/agriculture", tags=["Agriculture Module"])
 
 @router.get("/market-prices", response_model=List[MarketPriceDTO])
-def get_market_prices(district: Optional[str] = Query(None), db: Session = Depends(get_db)):
-    return agriculture_service.get_market_prices(db, district)
+def get_market_prices(
+    district: Optional[str] = Query(None),
+    division: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    return agriculture_service.get_market_prices(db, district=district, division=division)
 
 @router.post("/market-prices", response_model=MarketPriceDTO, status_code=status.HTTP_201_CREATED)
 def add_or_update_market_price(

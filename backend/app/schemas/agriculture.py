@@ -8,6 +8,7 @@ class MarketPriceDTO(BaseModel):
     crop_name_bn: str
     market_name: str
     district: str
+    division: Optional[str] = "ঢাকা"
     price_bdt_per_mon: float
     unit: str
     updated_at: datetime
@@ -20,6 +21,7 @@ class MarketPriceCreateDTO(BaseModel):
     crop_name_bn: str = Field(..., description="Crop name in Bangla e.g. আমন ধান")
     market_name: str = Field(..., description="Market location e.g. ধামরাই বাজার")
     district: str = Field(..., description="District e.g. ঢাকা")
+    division: Optional[str] = Field("ঢাকা", description="Division e.g. ঢাকা, রাজশাহী, সিলেট...")
     price_bdt_per_mon: float = Field(..., gt=0, description="Price per mon in BDT")
 
 class CropDiseaseDTO(BaseModel):
