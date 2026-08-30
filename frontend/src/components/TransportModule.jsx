@@ -4,27 +4,40 @@ import EmptyState from './ui/EmptyState';
 
 export default function TransportModule() {
   const [routes, setRoutes] = useState([]);
-  const [locations, setLocations] = useState({ origins: [], destinations: [], vehicle_types: [] });
+  const [locations, setLocations] = useState({ divisions: [], origins: [], destinations: [], vehicle_types: [] });
   
+  const [selectedDivision, setSelectedDivision] = useState('');
   const [selectedOrigin, setSelectedOrigin] = useState('');
   const [selectedDestination, setSelectedDestination] = useState('');
   const [selectedVehicleType, setSelectedVehicleType] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const fetchLocations = async () => {
+  const divisionsList = ["ঢাকা", "চট্টগ্রাম", "রাজশাহী", "খুলনা", "বরিশাল", "সিলেট", "রংপুর", "ময়মনসিংহ"];
+
+  const fetchLocations = async (div = '') => {
     try {
-      const res = await fetch('/api/transport/locations');
-      if (res.ok) setLocations(await res.json());
+      const url = div ? `/api/transport/locations?division=${encodeURIComponent(div)}` : '/api/transport/locations';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setLocations({
+          divisions: data.divisions || divisionsList,
+          origins: data.origins || [],
+          destinations: data.destinations || [],
+          vehicle_types: data.vehicle_types || []
+        });
+      }
     } catch (e) {}
   };
 
-  const fetchRoutes = async () => {
+  const fetchRoutes = async (division = selectedDivision, origin = selectedOrigin, destination = selectedDestination, vehicle = selectedVehicleType) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedOrigin) params.append('origin', selectedOrigin);
-      if (selectedDestination) params.append('destination', selectedDestination);
-      if (selectedVehicleType) params.append('vehicle_type', selectedVehicleType);
+      if (division && division !== 'সকল বিভাগ') params.append('division', division);
+      if (origin) params.append('origin', origin);
+      if (destination) params.append('destination', destination);
+      if (vehicle) params.append('vehicle_type', vehicle);
 
       const res = await fetch(`/api/transport/routes?${params.toString()}`);
       if (res.ok) setRoutes(await res.json());
@@ -39,19 +52,38 @@ export default function TransportModule() {
     fetchRoutes();
   }, []);
 
+  const handleDivisionChange = (e) => {
+    const div = e.target.value;
+    setSelectedDivision(div);
+    setSelectedOrigin('');
+    setSelectedDestination('');
+    fetchLocations(div);
+    fetchRoutes(div, '', '', selectedVehicleType);
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchRoutes();
+    fetchRoutes(selectedDivision, selectedOrigin, selectedDestination, selectedVehicleType);
   };
 
   return (
     <div className="card col-12" style={{ marginTop: '2rem' }}>
       <div className="card-header">
-        <h2>🚌 গ্রামীণ পরিবহন ও সময়সূচী পোর্টাল (Rural Transport Timetable)</h2>
+        <h2>🚌 গ্রামীণ পরিবহন ও সময়সূচী পোর্টাল — সকল ৮টি বিভাগ (Rural Transport Timetable)</h2>
         <span className="pattern-tag">Normalized Route & Schedule DB</span>
       </div>
 
       <form onSubmit={handleSearchSubmit} className="grid-layout" style={{ gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="form-group col-3">
+          <label>প্রশাসনিক বিভাগ (Division)</label>
+          <select className="form-control" value={selectedDivision} onChange={handleDivisionChange}>
+            <option value="">সকল বিভাগ (All 8 Divisions)</option>
+            {divisionsList.map((d) => (
+              <option key={d} value={d}>{d} বিভাগ</option>
+            ))}
+          </select>
+        </div>
+
         <div className="form-group col-3">
           <label>যাত্রার স্থান (Origin)</label>
           <select className="form-control" value={selectedOrigin} onChange={(e) => setSelectedOrigin(e.target.value)}>
@@ -83,7 +115,22 @@ export default function TransportModule() {
           </select>
         </div>
 
-        <div className="form-group col-3" style={{ display: 'flex', alignItems: 'flex-end' }}>
+        <div className="form-group col-12" style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn"
+            style={{ background: '#334155' }}
+            onClick={() => {
+              setSelectedDivision('');
+              setSelectedOrigin('');
+              setSelectedDestination('');
+              setSelectedVehicleType('');
+              fetchLocations('');
+              fetchRoutes('', '', '', '');
+            }}
+          >
+            ফিল্টার রিসেট
+          </button>
           <button type="submit" className="btn">সময়সূচী খুঁজুন</button>
         </div>
       </form>
@@ -101,8 +148,11 @@ export default function TransportModule() {
           {routes.map((r) => (
             <div key={r.id} className="service-card col-6" style={{ marginBottom: '1rem' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span className="pattern-tag" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}>{r.route_code}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <span className="pattern-tag" style={{ background: 'rgba(52, 211, 153, 0.2)', color: '#34d399' }}>{r.division || 'বাংলাদেশ'} বিভাগ</span>
+                    <span className="pattern-tag" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}>{r.route_code}</span>
+                  </div>
                   <span style={{ color: '#34d399', fontWeight: 'bold', fontSize: '1.1rem' }}>{r.fare_bdt} ৳ / টিকিট</span>
                 </div>
 
@@ -110,9 +160,9 @@ export default function TransportModule() {
                   🚩 {r.origin_bn} ➔ 🏁 {r.destination_bn}
                 </h3>
 
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                   <span>📏 দূরত্ব: {r.distance_km} কিমি</span>
-                  <span>⏱️ আনুমানিক সময়: {r.estimated_duration_minutes} মিনিট</span>
+                  <span>⏱️ সময়: {r.estimated_duration_minutes} মিনিট</span>
                   <span>🚌 অপারেটর: {r.operator_name_bn}</span>
                 </div>
 

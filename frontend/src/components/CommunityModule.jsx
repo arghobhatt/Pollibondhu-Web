@@ -18,10 +18,17 @@ export default function CommunityModule({ currentUser, authToken, onOpenAuth }) 
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
+  const [commentsMap, setCommentsMap] = useState({});
+  const [loadingCommentsMap, setLoadingCommentsMap] = useState({});
+  const [commentInputs, setCommentInputs] = useState({});
+  const [commentErrors, setCommentErrors] = useState({});
+
   const fetchForumPosts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/community/forum/posts');
+      const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+      const res = await fetch('/api/community/forum/posts', { headers });
       if (res.ok) setForumPosts(await res.json());
     } catch (e) {
     } finally {
@@ -43,7 +50,7 @@ export default function CommunityModule({ currentUser, authToken, onOpenAuth }) 
   useEffect(() => {
     if (activeTab === 'forum') fetchForumPosts();
     if (activeTab === 'training') fetchTrainingCourses();
-  }, [activeTab]);
+  }, [activeTab, authToken]);
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
@@ -78,6 +85,90 @@ export default function CommunityModule({ currentUser, authToken, onOpenAuth }) 
     } catch (e) {
       setPostError('নেটওয়ার্ক ত্রুটি!');
     }
+  };
+
+  const handleToggleReaction = async (postId) => {
+    if (!authToken) {
+      onOpenAuth();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/community/forum/posts/${postId}/react`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setForumPosts(prev => prev.map(p => p.id === postId ? { ...p, user_reacted: data.user_reacted, reactions_count: data.reactions_count } : p));
+      }
+    } catch (e) {}
+  };
+
+  const fetchComments = async (postId) => {
+    setLoadingCommentsMap(prev => ({ ...prev, [postId]: true }));
+    try {
+      const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
+      const res = await fetch(`/api/community/forum/posts/${postId}/comments`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setCommentsMap(prev => ({ ...prev, [postId]: data }));
+      }
+    } catch (e) {} finally {
+      setLoadingCommentsMap(prev => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleToggleComments = (postId) => {
+    if (activeCommentPostId === postId) {
+      setActiveCommentPostId(null);
+    } else {
+      setActiveCommentPostId(postId);
+      if (!commentsMap[postId]) fetchComments(postId);
+    }
+  };
+
+  const handleAddComment = async (e, postId) => {
+    e.preventDefault();
+    if (!authToken) {
+      onOpenAuth();
+      return;
+    }
+    const content = (commentInputs[postId] || '').trim();
+    if (!content) {
+      setCommentErrors(prev => ({ ...prev, [postId]: 'মন্তব্য লিখুন।' }));
+      return;
+    }
+    setCommentErrors(prev => ({ ...prev, [postId]: '' }));
+    try {
+      const res = await fetch(`/api/community/forum/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ content })
+      });
+      if (res.ok) {
+        const newC = await res.json();
+        setCommentsMap(prev => ({ ...prev, [postId]: [...(prev[postId] || []), newC] }));
+        setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+        setForumPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p));
+      }
+    } catch (e) {}
+  };
+
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!authToken) return;
+    try {
+      const res = await fetch(`/api/community/forum/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        setCommentsMap(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
+        setForumPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 1) - 1) } : p));
+      }
+    } catch (e) {}
   };
 
   return (
@@ -133,28 +224,113 @@ export default function CommunityModule({ currentUser, authToken, onOpenAuth }) 
             />
           ) : (
             <div className="grid-layout">
-              {forumPosts.map((post) => (
-                <div key={post.id} className="service-card col-6" style={{ marginBottom: '1rem' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <span className="pattern-tag" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}>
-                        {post.category}
-                      </span>
-                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>👀 {post.views_count} দেখা হয়েছে</span>
+              {forumPosts.map((post) => {
+                const isCommentOpen = activeCommentPostId === post.id;
+                const postComments = commentsMap[post.id] || [];
+                const isLoadingComments = loadingCommentsMap[post.id];
+
+                return (
+                  <div key={post.id} className="service-card col-6" style={{ marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                        <span className="pattern-tag" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}>
+                          {post.category}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>👀 {post.views_count} দেখা হয়েছে</span>
+                      </div>
+
+                      <h4 style={{ fontSize: '1.05rem', color: '#f8fafc', margin: '0.5rem 0' }}>{post.title}</h4>
+                      <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '0.75rem' }}>
+                        {post.content}
+                      </p>
                     </div>
 
-                    <h4 style={{ fontSize: '1.05rem', color: '#f8fafc', margin: '0.5rem 0' }}>{post.title}</h4>
-                    <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', marginBottom: '0.75rem' }}>
-                      {post.content}
-                    </p>
-                  </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
+                      <span>👤 লেখক: {post.author_name}</span>
+                      <span>📅 {new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
-                    <span>👤 লেখক: {post.author_name}</span>
-                    <span>📅 {new Date(post.created_at).toLocaleDateString()}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleReaction(post.id)}
+                        className="btn"
+                        style={{
+                          width: 'auto',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.8rem',
+                          background: post.user_reacted ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
+                          color: post.user_reacted ? '#f87171' : '#cbd5e1',
+                          border: post.user_reacted ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        ❤️ {post.reactions_count || 0} লাইক
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleComments(post.id)}
+                        className="btn"
+                        style={{
+                          width: 'auto',
+                          padding: '0.25rem 0.75rem',
+                          fontSize: '0.8rem',
+                          background: isCommentOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                          color: isCommentOpen ? '#34d399' : '#cbd5e1'
+                        }}
+                      >
+                        💬 {post.comments_count || 0} মন্তব্য {isCommentOpen ? '▲' : '▼'}
+                      </button>
+                    </div>
+
+                    {isCommentOpen && (
+                      <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '0.5rem' }}>
+                        <h5 style={{ fontSize: '0.85rem', color: '#38bdf8', marginBottom: '0.5rem' }}>মন্তব্যসমূহ:</h5>
+                        {isLoadingComments ? (
+                          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>লোড হচ্ছে...</div>
+                        ) : postComments.length === 0 ? (
+                          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>এখনও কোন মন্তব্য নেই।</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
+                            {postComments.map(c => (
+                              <div key={c.id} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '0.35rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#34d399' }}>
+                                  <span>{c.author_name}</span>
+                                  {c.can_delete && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteComment(post.id, c.id)}
+                                      style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.75rem' }}
+                                    >
+                                      মুছুন
+                                    </button>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: '#e2e8f0', marginTop: '0.2rem' }}>{c.content}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <form onSubmit={(e) => handleAddComment(e, post.id)} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                            placeholder={authToken ? "মন্তব্য লিখুন..." : "মন্তব্য করতে লগইন করুন..."}
+                            value={commentInputs[post.id] || ''}
+                            onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            disabled={!authToken}
+                          />
+                          <button type="submit" className="btn" style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} disabled={!authToken}>
+                            পাঠান
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

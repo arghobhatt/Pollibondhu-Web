@@ -21,9 +21,17 @@ class UtilityService:
                 id="water_irrigation",
                 name_bn="কৃষি সেচ ও নলকূপ পানি বিল",
                 name_en="Irrigation Water Bill",
-                biller_name_bn="উপজেলা কৃষি সেচ কমিটি ও বিএমডিএ",
+                biller_name_bn="উপজেলা কৃষি সেচ কমিটি ও বিএমডিএ (ওয়াসা)",
                 icon="💧",
                 description_bn="গভীর নলকূপ সেচ কমিটি ও কৃষক কার্ড নম্বর দিয়ে পানি বিল পরিশোধ করুন।"
+            ),
+            BillTypeDTO(
+                id="gas_lpg",
+                name_bn="এলপিজি ও গ্যাস বিল",
+                name_en="LPG & Gas Connection Bill",
+                biller_name_bn="এলপিজি ডিস্ট্রিবিউশন ও সংশ্লিষ্ট গ্যাস কোম্পানি",
+                icon="🔥",
+                description_bn="গ্রাহক কোড ও ডিলার আইডি দিয়ে এলপিজি ও গ্যাস বিল পরিশোধ করুন।"
             ),
             BillTypeDTO(
                 id="holding_tax",
@@ -44,11 +52,13 @@ class UtilityService:
         ]
 
     def pay_bill(self, db: Session, user: User, req: UtilityPaymentCreateDTO) -> UtilityBillResponseDTO:
-        txn_id = f"TXN-2026-{random.randint(100000, 999999)}"
+        txn_id = req.transaction_id.strip() if req.transaction_id and req.transaction_id.strip() else f"TXN-2026-{random.randint(100000, 999999)}"
+        pay_method = req.payment_method.strip() if req.payment_method else "bKash"
         
         biller_map = {
             "electricity": "বাংলাদেশ পল্লী বিদ্যুতায়ন বোর্ড (REB)",
-            "water_irrigation": "উপজেলা কৃষি সেচ কমিটি (BMDA)",
+            "water_irrigation": "উপজেলা কৃষি সেচ কমিটি (BMDA / ওয়াসা)",
+            "gas_lpg": "এলপিজি ও গ্যাস ডিস্ট্রিবিউশন বিভাগ",
             "holding_tax": "ইউনিয়ন পরিষদ হোল্ডিং বিভাগ",
             "trade_license": "ইউনিয়ন ট্রেড লাইসেন্স বিভাগ"
         }
@@ -61,6 +71,7 @@ class UtilityService:
             biller_name_bn=biller_name,
             account_number=req.account_number,
             amount_bdt=req.amount_bdt,
+            payment_method=pay_method,
             status="Paid"
         )
         db.add(new_bill)
@@ -68,7 +79,7 @@ class UtilityService:
         user_notif = Notification(
             user_id=user.id,
             title="ইউটিলিটি বিল পরিশোধ সফল",
-            message=f"আপনার {req.amount_bdt} টাকা বিল পরিশোধ সফল হয়েছে। ট্রানজেকশন আইডি: {txn_id}",
+            message=f"আপনার {req.amount_bdt} টাকা বিল পরিশোধ সফল হয়েছে। ট্রানজেকশন আইডি: {txn_id} ({pay_method})",
             channel="sms",
             is_read=False
         )

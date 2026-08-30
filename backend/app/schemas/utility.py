@@ -14,6 +14,8 @@ class UtilityPaymentCreateDTO(BaseModel):
     bill_type: str = Field(..., description="Bill category: 'electricity', 'water_irrigation', 'trade_license', 'holding_tax'")
     account_number: str = Field(..., min_length=3, description="Meter no / SMS Account no / Holding no")
     amount_bdt: float = Field(..., gt=0, description="Bill amount in BDT")
+    payment_method: Optional[str] = Field("digital", description="Payment method: 'bkash', 'nagad', 'rocket', 'bank', 'digital'")
+    transaction_id: Optional[str] = Field(None, description="Optional custom transaction ID")
 
 class UtilityBillResponseDTO(BaseModel):
     id: int
@@ -23,6 +25,7 @@ class UtilityBillResponseDTO(BaseModel):
     biller_name_bn: str
     account_number: str
     amount_bdt: float
+    payment_method: str = "digital"
     status: str
     paid_at: datetime
     created_at: datetime

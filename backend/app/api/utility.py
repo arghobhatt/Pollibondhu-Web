@@ -10,6 +10,7 @@ from app.services.utility_service import utility_service
 router = APIRouter(prefix="/api/utility", tags=["Utility Services"])
 
 @router.get("/bill-types", response_model=List[BillTypeDTO])
+@router.get("/types", response_model=List[BillTypeDTO])
 def get_bill_types():
     return utility_service.get_bill_types()
 

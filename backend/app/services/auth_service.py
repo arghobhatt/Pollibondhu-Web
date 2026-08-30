@@ -33,12 +33,20 @@ class AuthService:
                     detail="এই ইমেইল দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।"
                 )
 
+        role_enum = UserRole.CITIZEN
+        if req.role:
+            r_str = str(req.role).strip().upper()
+            if r_str in UserRole.__members__:
+                role_enum = UserRole[r_str]
+            elif r_str == "USER":
+                role_enum = UserRole.CITIZEN
+
         user = User(
             full_name=req.full_name,
             phone_number=req.phone_number,
             email=req.email,
             nid_number=req.nid_number,
-            role=req.role,
+            role=role_enum,
             division=req.division,
             district=req.district,
             upazila=req.upazila,

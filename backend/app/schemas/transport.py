@@ -16,6 +16,8 @@ class TransportScheduleDTO(BaseModel):
 class TransportRouteDTO(BaseModel):
     id: int
     route_code: str
+    division: str = "ঢাকা"
+    district: Optional[str] = "ঢাকা"
     origin_bn: str
     destination_bn: str
     distance_km: float

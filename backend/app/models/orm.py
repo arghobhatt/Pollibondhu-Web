@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import enum
-from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
@@ -49,6 +49,8 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
     utility_bills = relationship("UtilityBill", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
     forum_posts = relationship("ForumPost", back_populates="author", cascade="all, delete-orphan", passive_deletes=True)
+    forum_reactions = relationship("ForumPostReaction", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
+    forum_comments = relationship("ForumComment", back_populates="user", cascade="all, delete-orphan", passive_deletes=True)
 
 class ServiceApplication(Base):
     __tablename__ = "service_applications"
@@ -64,6 +66,12 @@ class ServiceApplication(Base):
     remarks = Column(Text, nullable=True)
     attached_documents = Column(Text, nullable=True)
     assigned_officer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    payment_method = Column(String(50), nullable=True)
+    transaction_id = Column(String(100), nullable=True, index=True)
+    payment_amount = Column(Float, default=0.0, nullable=False)
+    payment_status = Column(String(50), default="Pending", nullable=False)
+    payment_sender_account = Column(String(64), nullable=True)
+    payment_submitted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -211,6 +219,7 @@ class UtilityBill(Base):
     biller_name_bn = Column(String(255), nullable=False)
     account_number = Column(String(100), nullable=False)
     amount_bdt = Column(Float, nullable=False)
+    payment_method = Column(String(50), default="digital", nullable=False)
     status = Column(String(50), default="Paid", nullable=False)
     paid_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -222,6 +231,8 @@ class TransportRoute(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     route_code = Column(String(64), unique=True, nullable=False, index=True)
+    division = Column(String(100), default="ঢাকা", nullable=False, index=True)
+    district = Column(String(100), default="ঢাকা", nullable=True, index=True)
     origin_bn = Column(String(100), nullable=False, index=True)
     destination_bn = Column(String(100), nullable=False, index=True)
     distance_km = Column(Float, nullable=False)
@@ -271,6 +282,34 @@ class ForumPost(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     author = relationship("User", back_populates="forum_posts")
+    reactions = relationship("ForumPostReaction", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("ForumComment", back_populates="post", cascade="all, delete-orphan")
+
+class ForumPostReaction(Base):
+    __tablename__ = "forum_post_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (UniqueConstraint('post_id', 'user_id', name='uq_post_user_reaction'),)
+
+    post = relationship("ForumPost", back_populates="reactions")
+    user = relationship("User", back_populates="forum_reactions")
+
+class ForumComment(Base):
+    __tablename__ = "forum_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    post = relationship("ForumPost", back_populates="comments")
+    user = relationship("User", back_populates="forum_comments")
 
 class TrainingCourse(Base):
     __tablename__ = "training_courses"
@@ -283,3 +322,4 @@ class TrainingCourse(Base):
     video_url = Column(String(500), nullable=False)
     description_bn = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+

@@ -1,16 +1,65 @@
-# Pollibondhu — Software Design Patterns
+# Pollibondhu (পল্লীবন্ধু) — Integrated Citizen & Rural Agro-Service Platform
 
-Pollibondhu (পল্লীবন্ধু) is an integrated digital government and agricultural service web application designed to connect rural citizens and smallholder farmers in Bangladesh with government services, agricultural loans, crop market prices, weather advisories, and citizen complaint resolutions.
+Pollibondhu is an integrated digital government and agricultural service web application designed to connect rural citizens, smallholder farmers, and upazila administration officers in Bangladesh with essential public services, agricultural subsidies, market intelligence, digital utility payments, rural transport information, community knowledge sharing, and citizen grievance resolution.
 
-This project implements **five core software design patterns** in Python + FastAPI to address real architectural challenges in public service delivery, ensuring thread safety, modularity, mathematical isolation, decoupled event broadcasting, and subsystem simplification.
+---
 
-| # | Pattern | Pollibondhu Feature |
-|---|---------|---------------------|
-| 1 | **Singleton** | Weather API Client & Configuration Management |
-| 2 | **Factory Method** | Multi-channel Citizen Notification System (SMS, Email, Push) |
-| 3 | **Strategy** | Agricultural Loan Repayment & Interest Calculator (Standard, Seasonal, Subsidy) |
-| 4 | **Observer** | Service Application Status Updates & Audit Logging |
-| 5 | **Facade** | Unified Weather Subsystem Orchestration |
+## 🏗️ Architecture & Core Design Patterns
+
+The backend implements five core software design patterns in Python / FastAPI:
+
+| # | Design Pattern | Pollibondhu Application Module |
+|---|----------------|--------------------------------|
+| 1 | **Singleton** | Thread-safe Weather API Client (`WeatherApiClient`) & Configuration Management (`Settings`) |
+| 2 | **Factory Method** | Multi-channel Notification Engine (`ChannelNotificationFactory` for SMS, Email, Push) |
+| 3 | **Strategy** | Agricultural Loan Repayment & Interest Calculator (`StandardEMIStrategy`, `SeasonalCropLoanStrategy`, `GovernmentSubsidyLoanStrategy`) |
+| 4 | **Observer** | Application Lifecycle Events (`ApplicationEventPublisher`, `SMSObserver`, `AuditObserver`, `DashboardObserver`) |
+| 5 | **Facade** | Unified Weather Subsystem Orchestration (`WeatherFacade`) |
+
+---
+
+## 🌟 Key Platform Modules & Features
+
+1. **Authentication & User Management**:
+   - Role-based access control (`citizen`, `officer`, `admin`).
+   - Secure bcrypt password hashing and JWT bearer authentication.
+   - NID validation and profile management with live location tracking.
+
+2. **Digital Government & Agricultural Services**:
+   - 20+ rural public and agricultural services with document attachments.
+   - Dynamic application tracking via application number and citizen phone number.
+   - Full audit logging for every lifecycle status transition (`Pending`, `In Progress`, `Approved`, `Rejected`).
+
+3. **Payment & Transaction ID Verification**:
+   - Digital payment integration for Bangladesh payment channels: **bKash**, **Nagad**, **Rocket**, and **Bank Payment / Chalan**.
+   - Transaction ID ("লেনদেন আইডি / Transaction ID" / "ব্যাংক রেফারেন্স নম্বর / Transaction ID") submission and verification workflows.
+   - Multi-status payment tracking: `Submitted`, `Verified`, `Failed`, `Pending`, `Waived`.
+
+4. **Utility & Public Bill Payment Center**:
+   - Real-time digital bill payment for:
+     - ⚡ পল্লী বিদ্যুৎ বিল (Polli Bidyut Electricity Bill - REB)
+     - 💧 কৃষি সেচ ও নলকূপ পানি বিল (BMDA / WASA Irrigation Water)
+     - 🔥 এলপিজি ও গ্যাস বিল (LPG & Gas Connection)
+     - 🏠 ইউনিয়ন পরিষদ হোল্ডিং ট্যাক্স (Holding Tax)
+     - 📜 ইউনিয়ন ট্রেড লাইসেন্স ফি (Trade License Fee)
+   - Dynamic user payment history and digital receipts.
+
+5. **Grameen Poribohon (গ্রামীণ পরিবহন)**:
+   - Complete route coverage across **all 8 administrative divisions** of Bangladesh (ঢাকা, চট্টগ্রাম, রাজশাহী, খুলনা, বরিশাল, সিলেট, রংপুর, ময়মনসিংহ).
+   - Division filtering, schedule lookup, fare estimation, and contact details for local transport operators.
+
+6. **Community Forum & Digital Training**:
+   - Interactive citizen forum with real-time **Like ❤️ reactions** and **Comment 💬 feeds**.
+   - Verified agricultural video training guides covering biofloc aquaculture, seasonal crops, cattle farming, and digital financial safety.
+
+7. **Krishi Seba & Crop Doctor**:
+   - Diagnostic crop disease identification engine with organic and chemical treatment advice.
+   - Division-wise daily crop market prices covering paddy, potato, onion, vegetables, and fish.
+
+8. **Officer Dashboard & Grievance Resolution**:
+   - Dynamically calculated statistics for assigned applications, complaints, and total resolved files.
+   - Application status updates with officer remarks and payment validation.
+   - Citizen complaint investigation and resolution pipeline.
 
 ---
 
@@ -28,75 +77,94 @@ To launch both the FastAPI backend server and React Vite frontend portal in one 
 
 ---
 
-# 📊 Viewing UML Diagrams
+## 🛠️ Manual Installation & Setup
 
-The UML class diagrams in this documentation are written using **Mermaid**.
+### Prerequisites
+- Python 3.10+
+- Node.js 18+ and npm
 
-The diagrams are written directly as Mermaid code blocks (` ```mermaid `), so the raw editor/source view will display them as Mermaid code text. Opening the **Markdown Preview** in VS Code is what renders them as interactive visual diagrams.
+### 1. Backend Setup
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-## VS Code Extension Installation
+# Start FastAPI development server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-To view the UML diagrams visually inside VS Code:
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. Open the Extensions panel (`Cmd + Shift + X` on macOS or `Ctrl + Shift + X` on Windows/Linux).
-2. Search for:
-   `Markdown Preview Mermaid Support`
-3. Install the extension published by **bierner** (`bierner.markdown-mermaid`).
-4. Open `README.md`.
-5. Open Markdown Preview in VS Code using:
-   - macOS: `Cmd + Shift + V` (or `Cmd + K V` for side-by-side preview)
-   - Windows/Linux: `Ctrl + Shift + V` (or `Ctrl + K V` for side-by-side preview)
-6. The five Mermaid UML diagrams will now render visually.
-
-## Troubleshooting
-
-If the diagrams still appear as text in VS Code:
-1. Make sure `Markdown Preview Mermaid Support` by **bierner** is installed and enabled.
-2. Close and reopen the README preview.
-3. Reload VS Code (`Cmd + Shift + P` -> `Developer: Reload Window`).
-4. Make sure the Mermaid code block starts with exactly:
-   ```mermaid
-5. Do not replace the Mermaid diagrams with static images.
+### 3. Production Build
+```bash
+cd frontend
+npm run build
+```
 
 ---
 
-## 1. Singleton Pattern
+## ⚙️ Environment Variables
 
-### 1. Problem It Solves
-Communicating with third-party REST APIs like OpenWeatherMap requires HTTP socket management, rate-limit tracking, and caching. Re-instantiating HTTP clients or cache stores on every incoming HTTP request causes memory bloat, socket exhaustion under high concurrency, and rate-limit breaches. A single shared `WeatherApiClient` instance must be preserved across all server request worker threads.
+Copy `.env.example` to `.env` in the root or `backend/` directory:
 
-### 2. Why This Pattern Was Chosen
-Standard global variables in Python can lead to re-initialization races in multi-threaded web servers. The Singleton pattern was chosen because it enforces a single memory instance at the class constructor level (`__new__`) using thread-safe locks, ensuring global cache consistency and connection pool reuse regardless of where or how many times the class is instantiated.
+```env
+# Application Configuration
+APP_NAME=Pollibondhu
+ENV=development
+PORT=8000
+HOST=0.0.0.0
 
-### 3. Files and Classes
+# Database Configuration
+DATABASE_URL=sqlite:///./pollibondhu.db
 
-| File | Class | Responsibility |
-|------|-------|----------------|
-| `backend/app/services/weather_client.py` | `WeatherApiClient` | Thread-safe Singleton managing HTTP connection pool, Bangla location translation, and 15-minute TTL cache. |
-| `backend/app/core/config.py` | `Settings` | Singleton class managing system-wide configuration parameters and environment variables. |
-| `backend/app/api/weather.py` | `get_weather()` | API route function obtaining the shared `WeatherApiClient` instance. |
+# JWT & Authentication Secret
+JWT_SECRET_KEY=your_secret_key_here
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
-### 4. Structure
+# Weather API
+WEATHER_API_BASE_URL=https://api.open-meteo.com/v1/forecast
 
-```mermaid
-classDiagram
-    class Settings {
-        -_instance: Settings
-        +APP_NAME: str
-        +OPENWEATHER_API_KEY: str
-    }
-    class WeatherApiClient {
-        -_instance: WeatherApiClient
-        -_lock: Lock
-        -_initialized: bool
-        -_cache: Dict
-        +city_translation: Dict
-        +__new__() WeatherApiClient
-        +fetch_weather(city: str) WeatherDataDTO
-    }
-
-    WeatherApiClient ..> Settings : reads configuration
+# CORS Allowed Origins
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173
 ```
+
+---
+
+## 🧪 Automated Testing
+
+Execute the comprehensive automated test suite across all API routes, design patterns, services, and dynamic dashboard calculations:
+
+```bash
+cd backend
+pytest -v
+```
+
+### Test Coverage & Modules
+- **87 Automated Test Cases** covering:
+  - `tests/api/test_auth.py` (Authentication, JWT tokens, Role validation)
+  - `tests/api/test_citizen.py` (Citizen services, applications, profile updates)
+  - `tests/api/test_feature_updates.py` (bKash/Nagad/Rocket/Bank Trx ID, All 8 division transport, Forum reactions & comments)
+  - `tests/api/test_utility.py` (Utility bill payments, payment methods, transaction receipts)
+  - `tests/api/test_officer.py` & `test_officer_stats_dynamic.py` (Dynamic statistics, application approval, complaint resolution)
+  - `tests/design_patterns/*` (Singleton, Factory Method, Strategy, Observer, Facade tests)
+
+---
+
+## 👥 Default Demo Credentials
+
+| Role | Mobile Number | Password | Description |
+|------|---------------|----------|-------------|
+| **Officer** | `+8801800000000` | `password123` | মোঃ রফিকুল ইসলাম (উপসহকারী কৃষি কর্মকর্তা) |
+| **Citizen (Farmer)** | `+8801812345678` | `password123` | আব্দুল কুদ্দুস (ক্ষুদ্র কৃষক) |
+| **Admin** | `+8801700000000` | `password123` | সিস্টেম এডমিন (প্রধান কার্যালয়) |
+
 
 ### 5. How It Works
 1. When `WeatherApiClient()` is called, Python enters `__new__`.

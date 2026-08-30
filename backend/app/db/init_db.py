@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.core.security import hash_password
+from app.db.database import Base, engine, SessionLocal
 from app.models.orm import (
     User,
     UserRole,
@@ -10,12 +11,21 @@ from app.models.orm import (
     TransportSchedule,
     EmergencyContact,
     ForumPost,
+    ForumPostReaction,
+    ForumComment,
     TrainingCourse,
     ServiceApplication,
-    ApplicationStatus
+    ApplicationStatus,
+    CitizenComplaint,
+    ComplaintStatus
 )
 
-def init_db(db: Session, close_db: bool = False) -> None:
+def init_db(db: Session = None, close_db: bool = False) -> None:
+    should_close = False
+    if db is None:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        should_close = True
     try:
         default_pwd_hash = hash_password("password123")
 
@@ -158,26 +168,71 @@ def init_db(db: Session, close_db: bool = False) -> None:
             db.add_all(articles)
             db.commit()
 
-        if db.query(TransportRoute).count() < 6:
+        if db.query(TransportRoute).count() < 20:
             db.query(TransportRoute).delete()
-            route1 = TransportRoute(route_code="ROUTE-DHAMRAI-GABTOLI", origin_bn="ধামরাই", destination_bn="গাবতলী (ঢাকা)", distance_km=38.5, estimated_duration_minutes=75, vehicle_type="bus", operator_name_bn="ধামরাই এক্সপ্রেস ও ডি-লিংক", fare_bdt=95.0)
-            route2 = TransportRoute(route_code="ROUTE-SAVAR-MANIKGANJ", origin_bn="সাভার", destination_bn="মানিকগঞ্জ", distance_km=42.0, estimated_duration_minutes=80, vehicle_type="bus", operator_name_bn="শুভযাত্রা পরিবহন", fare_bdt=110.0)
-            route3 = TransportRoute(route_code="ROUTE-SADARGHAT-BARISHAL", origin_bn="ঢাকা (সদরঘাট)", destination_bn="বরিশাল লঞ্চ টার্মিনাল", distance_km=180.0, estimated_duration_minutes=360, vehicle_type="launch", operator_name_bn="সুন্দরবন ও সুরভী নেভিগেশন", fare_bdt=350.0)
-            route4 = TransportRoute(route_code="ROUTE-DHAKA-RAJSHAHI-TRAIN", origin_bn="ঢাকা (কমলাপুর)", destination_bn="রাজশাহী স্টেশন", distance_km=250.0, estimated_duration_minutes=300, vehicle_type="train", operator_name_bn="বনলতা এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=420.0)
-            route5 = TransportRoute(route_code="ROUTE-DHAMRAI-LOCAL-AUTO", origin_bn="ধামরাই বাজার", destination_bn="কাওয়ালতিয়া ইউনিয়ন", distance_km=12.0, estimated_duration_minutes=25, vehicle_type="auto", operator_name_bn="লোকাল ইজি-বাইক সমিতি", fare_bdt=30.0)
-            route6 = TransportRoute(route_code="ROUTE-CHATTOGRAM-COXBAZAR", origin_bn="চট্টগ্রাম (অলংকার)", destination_bn="কক্সবাজার টার্মিনাল", distance_km=150.0, estimated_duration_minutes=240, vehicle_type="bus", operator_name_bn="মার্শা ও শ্যামলী পরিবহন", fare_bdt=380.0)
-            db.add_all([route1, route2, route3, route4, route5, route6])
+            routes_data = [
+                # Dhaka Division (ঢাকা)
+                TransportRoute(route_code="ROUTE-DHAMRAI-GABTOLI", division="ঢাকা", district="ঢাকা", origin_bn="ধামরাই", destination_bn="গাবতলী (ঢাকা)", distance_km=38.5, estimated_duration_minutes=75, vehicle_type="bus", operator_name_bn="ধামরাই এক্সপ্রেস ও ডি-লিংক", fare_bdt=95.0),
+                TransportRoute(route_code="ROUTE-SAVAR-MANIKGANJ", division="ঢাকা", district="মানিকগঞ্জ", origin_bn="সাভার", destination_bn="মানিকগঞ্জ বাসস্ট্যান্ড", distance_km=42.0, estimated_duration_minutes=80, vehicle_type="bus", operator_name_bn="শুভযাত্রা পরিবহন", fare_bdt=110.0),
+                TransportRoute(route_code="ROUTE-DHAKA-RAJSHAHI-TRAIN", division="ঢাকা", district="ঢাকা", origin_bn="ঢাকা (কমলাপুর)", destination_bn="রাজশাহী রেলওয়ে স্টেশন", distance_km=250.0, estimated_duration_minutes=300, vehicle_type="train", operator_name_bn="বনলতা এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=420.0),
+                TransportRoute(route_code="ROUTE-SADARGHAT-BARISHAL", division="ঢাকা", district="ঢাকা", origin_bn="ঢাকা (সদরঘাট)", destination_bn="বরিশাল লঞ্চ টার্মিনাল", distance_km=180.0, estimated_duration_minutes=360, vehicle_type="launch", operator_name_bn="এমভি সুন্দরবন ও সুরভী নেভিগেশন", fare_bdt=350.0),
+                TransportRoute(route_code="ROUTE-DHAMRAI-LOCAL-AUTO", division="ঢাকা", district="ঢাকা", origin_bn="ধামরাই বাজার", destination_bn="কাওয়ালতিয়া ইউনিয়ন", distance_km=12.0, estimated_duration_minutes=25, vehicle_type="auto", operator_name_bn="লোকাল ইজি-বাইক সমিতি", fare_bdt=30.0),
+
+                # Chattogram Division (চট্টগ্রাম)
+                TransportRoute(route_code="ROUTE-CHATTOGRAM-COXBAZAR", division="চট্টগ্রাম", district="কক্সবাজার", origin_bn="চট্টগ্রাম (অলংকার)", destination_bn="কক্সবাজার টার্মিনাল", distance_km=150.0, estimated_duration_minutes=240, vehicle_type="bus", operator_name_bn="মার্শা ও শ্যামলী স্পেশাল", fare_bdt=380.0),
+                TransportRoute(route_code="ROUTE-CHATTOGRAM-DHAKA-TRAIN", division="চট্টগ্রাম", district="চট্টগ্রাম", origin_bn="চট্টগ্রাম রেলওয়ে স্টেশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=320.0, estimated_duration_minutes=310, vehicle_type="train", operator_name_bn="সুবর্ণ এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=450.0),
+                TransportRoute(route_code="ROUTE-CHATTOGRAM-SANDWIP-LAUNCH", division="চট্টগ্রাম", district="চট্টগ্রাম", origin_bn="চট্টগ্রাম সদরঘাট নদী টার্মিনাল", destination_bn="সন্দ্বীপ ঘাট", distance_km=45.0, estimated_duration_minutes=90, vehicle_type="launch", operator_name_bn="বিআইডব্লিউটিসি উপকূলীয় সী-ট্রাক", fare_bdt=180.0),
+                TransportRoute(route_code="ROUTE-PATIYA-RURAL-AUTO", division="চট্টগ্রাম", district="চট্টগ্রাম", origin_bn="পটিয়া বাসস্ট্যান্ড", destination_bn="শান্তিরহাট ইউনিয়ন বাজার", distance_km=14.0, estimated_duration_minutes=30, vehicle_type="auto", operator_name_bn="পটিয়া সিএনজি অটোরিকশা ইউনিয়ন", fare_bdt=35.0),
+
+                # Rajshahi Division (রাজশাহী)
+                TransportRoute(route_code="ROUTE-RAJSHAHI-NAOGAON", division="রাজশাহী", district="নওগাঁ", origin_bn="রাজশাহী (শিরোইল)", destination_bn="নওগাঁ বালুডাঙ্গা টার্মিনাল", distance_km=75.0, estimated_duration_minutes=110, vehicle_type="bus", operator_name_bn="বরেন্দ্র এক্সপ্রেস ও গ্রামীণ সেবা", fare_bdt=160.0),
+                TransportRoute(route_code="ROUTE-RAJSHAHI-DHAKA-TRAIN", division="রাজশাহী", district="রাজশাহী", origin_bn="রাজশাহী রেলওয়ে স্টেশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=250.0, estimated_duration_minutes=290, vehicle_type="train", operator_name_bn="সিল্কসিটি এক্সপ্রেস", fare_bdt=420.0),
+                TransportRoute(route_code="ROUTE-BAGHA-ARANI-AUTO", division="রাজশাহী", district="রাজশাহী", origin_bn="বাঘা বাজার", destination_bn="আড়ানী রেলওয়ে স্টেশন", distance_km=10.5, estimated_duration_minutes=20, vehicle_type="auto", operator_name_bn="বাঘা লোকাল অটোরিকশা চালক সমিতি", fare_bdt=25.0),
+
+                # Khulna Division (খুলনা)
+                TransportRoute(route_code="ROUTE-KHULNA-JASHORE", division="খুলনা", district="যশোর", origin_bn="খুলনা (সোনাডাঙ্গা)", destination_bn="যশোর কেন্দ্রীয় বাস টার্মিনাল", distance_km=60.0, estimated_duration_minutes=90, vehicle_type="bus", operator_name_bn="রূপসা ডিলাক্স ও গড়াই পরিবহন", fare_bdt=130.0),
+                TransportRoute(route_code="ROUTE-KHULNA-DHAKA-TRAIN", division="খুলনা", district="খুলনা", origin_bn="খুলনা রেলওয়ে স্টেশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=360.0, estimated_duration_minutes=420, vehicle_type="train", operator_name_bn="চিত্রা এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=510.0),
+                TransportRoute(route_code="ROUTE-KHULNA-SARANKHOLA-LAUNCH", division="খুলনা", district="বাগেরহাট", origin_bn="খুলনা বিআইডব্লিউটিএ ঘাট", destination_bn="বাগেরহাট শরণখোলা রেঞ্জ", distance_km=85.0, estimated_duration_minutes=240, vehicle_type="launch", operator_name_bn="এমভি সুন্দরবন ডেল্টা রুট", fare_bdt=220.0),
+                TransportRoute(route_code="ROUTE-RUPSA-FAKIRHAT-AUTO", division="খুলনা", district="খুলনা", origin_bn="পূর্ব রূপসা ঘাট", destination_bn="ফকিরহাট উপজেলা মোড়", distance_km=16.0, estimated_duration_minutes=35, vehicle_type="auto", operator_name_bn="রূপসা ইজিবাইক ইউনিয়ন সমবায়", fare_bdt=40.0),
+
+                # Barishal Division (বরিশাল)
+                TransportRoute(route_code="ROUTE-BARISHAL-KUAKATA", division="বরিশাল", district="পটুয়াখালী", origin_bn="বরিশাল (নথুল্লাবাদ)", destination_bn="পটুয়াখালী কুয়াকাটা সৈকত", distance_km=108.0, estimated_duration_minutes=170, vehicle_type="bus", operator_name_bn="সাকুরা ও ইলিশ পরিবহন", fare_bdt=250.0),
+                TransportRoute(route_code="ROUTE-BARISHAL-DHAKA-LAUNCH", division="বরিশাল", district="বরিশাল", origin_bn="বরিশাল নদীবন্দর ঘাট", destination_bn="ঢাকা (সদরঘাট টার্মিনাল)", distance_km=180.0, estimated_duration_minutes=360, vehicle_type="launch", operator_name_bn="সুরভী-৯ ও কীর্তনখোলা লঞ্চ", fare_bdt=350.0),
+                TransportRoute(route_code="ROUTE-BARISHAL-BHOLA-FERRY", division="বরিশাল", district="ভোলা", origin_bn="লাহারহাট ফেরিঘাট (বরিশাল)", destination_bn="ভেদুরিয়া ঘাট (ভোলা)", distance_km=22.0, estimated_duration_minutes=60, vehicle_type="launch", operator_name_bn="বিআইডব্লিউটিসি উপকূলীয় ফেরি", fare_bdt=70.0),
+                TransportRoute(route_code="ROUTE-RUPATALI-NALCHITY-AUTO", division="বরিশাল", district="ঝালকাঠি", origin_bn="রূপাতলী বাসস্ট্যান্ড", destination_bn="নলছিটি উপজেলা সদর", distance_km=15.0, estimated_duration_minutes=30, vehicle_type="auto", operator_name_bn="মাহিন্দ্রা ও লোকাল অটোরিকশা সার্ভিস", fare_bdt=40.0),
+
+                # Sylhet Division (সিলেট)
+                TransportRoute(route_code="ROUTE-SYLHET-MOULVIBAZAR", division="সিলেট", district="মৌলভীবাজার", origin_bn="সিলেট (কদমতলী)", destination_bn="মৌলভীবাজার শ্রীমঙ্গল মোড়", distance_km=62.0, estimated_duration_minutes=95, vehicle_type="bus", operator_name_bn="হবিগঞ্জ এক্সপ্রেস ও জালালাবাদ বাস", fare_bdt=140.0),
+                TransportRoute(route_code="ROUTE-SYLHET-DHAKA-TRAIN", division="সিলেট", district="সিলেট", origin_bn="সিলেট রেলওয়ে স্টেশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=315.0, estimated_duration_minutes=360, vehicle_type="train", operator_name_bn="কালনী এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=430.0),
+                TransportRoute(route_code="ROUTE-GOWAINGHAT-JAFLONG-AUTO", division="সিলেট", district="সিলেট", origin_bn="গোয়াইনঘাট উপজেলা বাজার", destination_bn="জাফলং জিরো পয়েন্ট", distance_km=18.0, estimated_duration_minutes=35, vehicle_type="auto", operator_name_bn="গোয়াইনঘাট লেগুনা ও অটোরিকশা সমিতি", fare_bdt=50.0),
+
+                # Rangpur Division (রংপুর)
+                TransportRoute(route_code="ROUTE-RANGPUR-DINAJPUR", division="রংপুর", district="দিনাজপুর", origin_bn="রংপুর (কামারপাড়া)", destination_bn="দিনাজপুর কেন্দ্রীয় টার্মিনাল", distance_km=70.0, estimated_duration_minutes=100, vehicle_type="bus", operator_name_bn="তৃপ্তি ও পঞ্চগড় স্পেশাল", fare_bdt=150.0),
+                TransportRoute(route_code="ROUTE-RANGPUR-DHAKA-TRAIN", division="রংপুর", district="রংপুর", origin_bn="রংপুর রেলওয়ে স্টেশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=335.0, estimated_duration_minutes=480, vehicle_type="train", operator_name_bn="রংপুর এক্সপ্রেস (বাংলাদেশ রেলওয়ে)", fare_bdt=490.0),
+                TransportRoute(route_code="ROUTE-TARAGANJ-IKARCHALI-AUTO", division="রংপুর", district="রংপুর", origin_bn="তারাগঞ্জ বাজার", destination_bn="ইকরচালী ইউনিয়ন মোড়", distance_km=11.0, estimated_duration_minutes=25, vehicle_type="auto", operator_name_bn="তারাগঞ্জ ইজিবাইক ইউনিয়ন সমবায়", fare_bdt=30.0),
+
+                # Mymensingh Division (ময়মনসিংহ)
+                TransportRoute(route_code="ROUTE-MYMENSINGH-NETROKONA", division="ময়মনসিংহ", district="নেত্রকোণা", origin_bn="ময়মনসিংহ (মাসকান্দা)", destination_bn="নেত্রকোণা পৌর বাস টার্মিনাল", distance_km=40.0, estimated_duration_minutes=65, vehicle_type="bus", operator_name_bn="হযরত শাহজালাল ও নেত্রকোণা লিংক", fare_bdt=90.0),
+                TransportRoute(route_code="ROUTE-MYMENSINGH-DHAKA-TRAIN", division="ময়মনসিংহ", district="ময়মনসিংহ", origin_bn="ময়মনসিংহ রেলওয়ে জংশন", destination_bn="ঢাকা (কমলাপুর)", distance_km=120.0, estimated_duration_minutes=150, vehicle_type="train", operator_name_bn="তিস্তা এক্সপ্রেস ও ব্রহ্মপুত্র এক্সপ্রেস", fare_bdt=180.0),
+                TransportRoute(route_code="ROUTE-MYMENSINGH-RURAL-AUTO", division="ময়মনসিংহ", district="ময়মনসিংহ", origin_bn="শম্ভুগঞ্জ মোড়", destination_bn="গৌরীপুর উপজেলা বাজার", distance_km=17.0, estimated_duration_minutes=35, vehicle_type="auto", operator_name_bn="শম্ভুগঞ্জ-গৌরীপুর অটোরিকশা সার্ভিস", fare_bdt=45.0)
+            ]
+            db.add_all(routes_data)
             db.commit()
 
-            schedules = [
-                TransportSchedule(route_id=route1.id, departure_time="০৬:৩০ AM", arrival_time="০৭:৪৫ AM", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route1.id, departure_time="০৯:০০ AM", arrival_time="১০:১৫ AM", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route2.id, departure_time="০৭:০০ AM", arrival_time="০৮:২০ AM", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route3.id, departure_time="০৮:৩০ PM", arrival_time="০৪:৩০ AM", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route4.id, departure_time="০৬:০০ AM", arrival_time="১১:০০ AM", days_of_week="শুক্রবার ব্যতীত (Daily except Fri)"),
-                TransportSchedule(route_id=route5.id, departure_time="প্রতি ১৫ মিনিট পর", arrival_time="২৫ মিনিট পর", days_of_week="দৈনিক (Daily)"),
-                TransportSchedule(route_id=route6.id, departure_time="০৭:৩০ AM", arrival_time="১১:৩০ AM", days_of_week="দৈনিক (Daily)")
-            ]
+            schedules = []
+            for r in routes_data:
+                if r.vehicle_type == "auto":
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="প্রতি ১০-১৫ মিনিট পর", arrival_time="১৫-২৫ মিনিট পর", days_of_week="দৈনিক (Daily)"))
+                elif r.vehicle_type == "train":
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৬:১৫ AM", arrival_time="১১:৩০ AM", days_of_week="শুক্রবার ব্যতীত (Daily except Fri)"))
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৩:০০ PM", arrival_time="০৮:১৫ PM", days_of_week="দৈনিক (Daily)"))
+                elif r.vehicle_type == "launch":
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৮:৩০ PM", arrival_time="০৪:৩০ AM", days_of_week="দৈনিক (Daily)"))
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৯:০০ PM", arrival_time="০৫:০০ AM", days_of_week="দৈনিক (Daily)"))
+                else: # bus
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৭:০০ AM", arrival_time="০৮:৩০ AM", days_of_week="দৈনিক (Daily)"))
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="১১:০০ AM", arrival_time="১২:৩০ PM", days_of_week="দৈনিক (Daily)"))
+                    schedules.append(TransportSchedule(route_id=r.id, departure_time="০৪:০০ PM", arrival_time="০৫:৩০ PM", days_of_week="দৈনিক (Daily)"))
             db.add_all(schedules)
             db.commit()
 
@@ -208,6 +263,15 @@ def init_db(db: Session, close_db: bool = False) -> None:
                 ForumPost(user_id=farmer.id, author_name="আনোয়ার পারভেজ (বগুড়া)", title="উপজেলা কৃষি অফিসে স্মার্ট কৃষক কার্ড কার্ড নিবন্ধনের নিয়মাবলী", category="সরকারি সেবা", content="NID ও ২ কপি ছবি নিয়ে নিকটস্থ ইউনিয়ন ডিজিটাল সেন্টারে ফ্রিতে নিবন্ধন করা যায়।", views_count=110)
             ]
             db.add_all(posts)
+            db.commit()
+
+            # Seed sample reactions and comments on first post
+            first_post = posts[0]
+            db.refresh(first_post)
+            reaction1 = ForumPostReaction(post_id=first_post.id, user_id=farmer.id)
+            comment1 = ForumComment(post_id=first_post.id, user_id=officer.id if officer else farmer.id, author_name="উপসহকারী কৃষি কর্মকর্তা (ধামরাই)", content="লাল পোকা দমনে নিম তেলের দ্রবণ (প্রতি লিটারে ৩ মিলি) প্রয়োগ করুন। প্রয়োজনে স্থানীয় কৃষি অফিসে যোগাযোগ করুন।")
+            db.add_all([reaction1, comment1])
+            db.commit()
             db.commit()
 
         # Update Training Courses with the 5 EXACT verified YouTube Videos
@@ -257,22 +321,554 @@ def init_db(db: Session, close_db: bool = False) -> None:
         db.add_all(courses)
         db.commit()
 
-        app_rec = db.query(ServiceApplication).filter(ServiceApplication.application_number == "APP-2026-8801").first()
-        if not app_rec and farmer:
-            app_rec = ServiceApplication(
-                application_number="APP-2026-8801",
-                user_id=farmer.id,
-                service_type="agri_loan",
-                sub_service_name="কৃষি ঋণ (Subsidized Agri Loan)",
-                status=ApplicationStatus.PENDING,
-                applicant_name=farmer.full_name,
-                applicant_phone=farmer.phone_number,
-                assigned_officer_id=officer.id,
-                remarks="প্রাথমিক ঋণের আবেদন জমা হয়েছে"
+        # Seed Realistic Citizens for Demo Relationships
+        demo_citizens_data = [
+            ("মোছাম্মৎ রহিমা খাতুন (মহিলা উদ্যোক্তা)", "+8801711223344", "rahima.agro@gmail.com", "1994112233445", "ঢাকা", "ঢাকা", "সাভার"),
+            ("মোঃ শফিকুল ইসলাম (মৎস্য চাষী)", "+8801722334455", "shafiq.fish@gmail.com", "1989223344556", "ঢাকা", "গাজীপুর", "শ্রীপুর"),
+            ("আব্দুর রাজ্জাক (সবজি চাষী)", "+8801733445566", "razzak.veg@gmail.com", "1992334455667", "ঢাকা", "নরসিংদী", "শিবপুর"),
+            ("জসিম উদ্দিন (আলু চাষী)", "+8801744556677", "jasim.potato@gmail.com", "1987445566778", "রংপুর", "রংপুর", "মিঠাপুকুর"),
+            ("সোহেল রানা (পাট চাষী)", "+8801755667788", "sohel.jute@gmail.com", "1991556677889", "খুলনা", "যশোর", "মনিরামপুর"),
+            ("আমির হোসেন (পেঁয়াজ চাষী)", "+8801766778899", "amir.onion@gmail.com", "1986667788990", "রাজশাহী", "পাবনা", "সাঁথিয়া"),
+            ("আনোয়ার পারভেজ (ফল চাষী)", "+8801777889900", "anwar.fruit@gmail.com", "1993778899001", "রাজশাহী", "বগুড়া", "শেরপুর"),
+            ("ফারুক হোসেন (পোল্ট্রি খামারী)", "+8801788990011", "faruk.poultry@gmail.com", "1988889900112", "ময়মনসিংহ", "ময়মনসিংহ", "ভালুকা"),
+            ("বেগম সেলিনা আক্তার (দুগ্ধ খামারী)", "+8801799001122", "selina.dairy@gmail.com", "1995990011223", "রাজশাহী", "সিরাজগঞ্জ", "শাহজাদপুর")
+        ]
+        
+        citizen_users = [farmer] if farmer else []
+        for name, phone, email, nid, div, dist, upaz in demo_citizens_data:
+            c_user = db.query(User).filter(User.phone_number == phone).first()
+            if not c_user:
+                c_user = User(
+                    full_name=name,
+                    phone_number=phone,
+                    email=email,
+                    nid_number=nid,
+                    role=UserRole.CITIZEN,
+                    division=div,
+                    district=dist,
+                    upazila=upaz,
+                    password_hash=default_pwd_hash
+                )
+                db.add(c_user)
+                db.commit()
+                db.refresh(c_user)
+            citizen_users.append(c_user)
+
+        # Seed 22 Realistic Demo Service Applications (Idempotent by application_number)
+        u_main = citizen_users[0]
+        u_rahima = citizen_users[1] if len(citizen_users) > 1 else u_main
+        u_shafiq = citizen_users[2] if len(citizen_users) > 2 else u_main
+        u_razzak = citizen_users[3] if len(citizen_users) > 3 else u_main
+        u_jasim = citizen_users[4] if len(citizen_users) > 4 else u_main
+        u_sohel = citizen_users[5] if len(citizen_users) > 5 else u_main
+        u_amir = citizen_users[6] if len(citizen_users) > 6 else u_main
+        u_anwar = citizen_users[7] if len(citizen_users) > 7 else u_main
+        u_faruk = citizen_users[8] if len(citizen_users) > 8 else u_main
+        u_selina = citizen_users[9] if len(citizen_users) > 9 else u_main
+
+        demo_apps = [
+                ServiceApplication(
+                    application_number="APP-2026-1001",
+                    user_id=u_main.id,
+                    service_type="কৃষি ও কৃষক সেবা",
+                    sub_service_name="কৃষি যন্ত্রপাতি উন্নয়ন অনুদান",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_main.full_name,
+                    applicant_phone=u_main.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK8923471X",
+                    payment_amount=500.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01812345678",
+                    remarks="৫০% ভর্তুকিতে পাওয়ার টিলার ক্রয়ের প্রাথমিক আবেদন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1002",
+                    user_id=u_rahima.id,
+                    service_type="কৃষি ঋণ সহায়তা",
+                    sub_service_name="কৃষি ঋণ (Subsidized Agri Loan)",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_rahima.full_name,
+                    applicant_phone=u_rahima.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Bank",
+                    transaction_id="CHALAN-2026-DH-101",
+                    payment_amount=200.0,
+                    payment_status="Verified",
+                    payment_sender_account="সোনালী ব্যাংক - ধামরাই শাখা",
+                    remarks="কাগজপত্র যাচাই সম্পন্ন, সরেজমিনে জমি পরিদর্শনের অপেক্ষায়"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1003",
+                    user_id=u_shafiq.id,
+                    service_type="কৃষি ও কৃষক সেবা",
+                    sub_service_name="উন্নত জাতের বীজ ও সার সহায়তা",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_shafiq.full_name,
+                    applicant_phone=u_shafiq.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Nagad",
+                    transaction_id="NG7382910M",
+                    payment_amount=150.0,
+                    payment_status="Verified",
+                    payment_sender_account="01722334455",
+                    remarks="আবেদন অনুমোদিত হয়েছে। স্থানীয় কৃষি অফিস থেকে সার ও বীজ সংগ্রহ করুন।"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1004",
+                    user_id=u_razzak.id,
+                    service_type="পানি ও সেচ সেবা",
+                    sub_service_name="গভীর নলকূপ সেচ সংযোগ আবেদন",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_razzak.full_name,
+                    applicant_phone=u_razzak.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Rocket",
+                    transaction_id="RK4829103R",
+                    payment_amount=1000.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01733445566",
+                    remarks="নলকূপ সেচ স্কিম লাইন অনুমোদনের আবেদন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1005",
+                    user_id=u_jasim.id,
+                    service_type="নাগরিক সেবা",
+                    sub_service_name="ইউনিয়ন ডিজিটাল কৃষক কার্ড নিবন্ধন",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_jasim.full_name,
+                    applicant_phone=u_jasim.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method=None,
+                    transaction_id=None,
+                    payment_amount=0.0,
+                    payment_status="Waived",
+                    remarks="বিনামূল্যে স্মার্ট কৃষক কার্ড কার্ড প্রস্তুত ও ডাটাবেজে অন্তর্ভুক্ত"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1006",
+                    user_id=u_sohel.id,
+                    service_type="প্রাণিসম্পদ সেবা",
+                    sub_service_name="বাণিজ্যিক ডেইরি ফার্ম লাইসেন্স ও অনুদান",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_sohel.full_name,
+                    applicant_phone=u_sohel.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK9912834Y",
+                    payment_amount=750.0,
+                    payment_status="Verified",
+                    payment_sender_account="01755667788",
+                    remarks="খামারের ড্রেনেজ ও পরিবেশ ক্লিয়ারেন্স রিপোর্ট প্রক্রিয়াধীন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1007",
+                    user_id=u_amir.id,
+                    service_type="মৎস্য ও প্রাণিসম্পদ",
+                    sub_service_name="বায়োফ্লক মৎস্য হ্যাচারি নিবন্ধন",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_amir.full_name,
+                    applicant_phone=u_amir.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Nagad",
+                    transaction_id="NG8823109K",
+                    payment_amount=600.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01766778899",
+                    remarks="নতুন বায়োফ্লক ট্যাঙ্ক ও অক্সিজেনেশন সেটআপ অনুমোদন ফাইল"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1008",
+                    user_id=u_anwar.id,
+                    service_type="নবায়নযোগ্য শক্তি",
+                    sub_service_name="সৌরবিদ্যুৎ চালিত সৌর সেচ পাম্প অনুদান",
+                    status=ApplicationStatus.REJECTED,
+                    applicant_name=u_anwar.full_name,
+                    applicant_phone=u_anwar.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Bank",
+                    transaction_id="CHALAN-2026-GZ-204",
+                    payment_amount=500.0,
+                    payment_status="Failed",
+                    payment_sender_account="রূপালী ব্যাংক - শ্রীপুর শাখা",
+                    remarks="জমি সংক্রান্ত মালিকানার খতিয়ান অসম্পূর্ণ থাকায় বাতিল"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1009",
+                    user_id=u_faruk.id,
+                    service_type="পৌর ও ইউনিয়ন সেবা",
+                    sub_service_name="ইউনিয়ন পরিষদ ট্রেড লাইসেন্স আবেদন",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_faruk.full_name,
+                    applicant_phone=u_faruk.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK7710294Z",
+                    payment_amount=400.0,
+                    payment_status="Verified",
+                    payment_sender_account="01788990011",
+                    remarks="ডিজিটাল ট্রেড লাইসেন্স কিউআর কোডসহ ইস্যু করা হয়েছে"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1010",
+                    user_id=u_selina.id,
+                    service_type="কৃষি সম্প্রসারণ",
+                    sub_service_name="শস্য বহুমুখীকরণ ও প্রদর্শন প্লট অনুদান",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_selina.full_name,
+                    applicant_phone=u_selina.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Rocket",
+                    transaction_id="RK9901823T",
+                    payment_amount=300.0,
+                    payment_status="Verified",
+                    payment_sender_account="01799001122",
+                    remarks="স্ট্রবেরি ও ড্রাগন ফল প্রদর্শনী প্লটের বাজেট অনুমোদন প্রক্রিয়ায়"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1011",
+                    user_id=u_main.id,
+                    service_type="দুর্যোগ ব্যবস্থাপনা",
+                    sub_service_name="জরুরি বন্যা ও খরা পুনর্বাসন সহায়তা",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_main.full_name,
+                    applicant_phone=u_main.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method=None,
+                    transaction_id=None,
+                    payment_amount=0.0,
+                    payment_status="Pending",
+                    remarks="অকাল বন্যায় ক্ষতিগ্রস্ত ফসলের সরকারি আর্থিক অনুদান তালিকা"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1012",
+                    user_id=u_rahima.id,
+                    service_type="পরিবেশ ও কৃষি",
+                    sub_service_name="জৈব সার প্রস্তুত কারখানা স্থাপন অনুদান",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_rahima.full_name,
+                    applicant_phone=u_rahima.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Bank",
+                    transaction_id="CHALAN-2026-MY-309",
+                    payment_amount=1200.0,
+                    payment_status="Verified",
+                    payment_sender_account="বাংলাদেশ কৃষি ব্যাংক - ভালুকা শাখা",
+                    remarks="কেঁচো কম্পোস্ট (ভার্মিকম্পোস্ট) শেড নির্মাণ অনুমোদন ও চেক প্রদান"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1013",
+                    user_id=u_jasim.id,
+                    service_type="শস্য সংরক্ষণ",
+                    sub_service_name="কৃষি পণ্য সংরক্ষণ ও মিনি কোল্ডস্টোরেজ সহায়তা",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_jasim.full_name,
+                    applicant_phone=u_jasim.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK5501928A",
+                    payment_amount=800.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01744556677",
+                    remarks="আলু বীজ সংরক্ষণ চেম্বারের প্রযুক্তিগত পরিদর্শন সম্পন্ন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1014",
+                    user_id=u_sohel.id,
+                    service_type="স্মার্ট এগ্রো সার্ভিস",
+                    sub_service_name="কৃষি ড্রোন স্প্রেয়িং সেবা বুকিং",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_sohel.full_name,
+                    applicant_phone=u_sohel.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Nagad",
+                    transaction_id="NG1928374P",
+                    payment_amount=350.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01755667788",
+                    remarks="১০ বিঘা পাট ক্ষেতে ড্রোন দিয়ে ছত্রাকনাশক স্প্রে করার সময়সূচী বুকিং"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1015",
+                    user_id=u_selina.id,
+                    service_type="প্রাণিসম্পদ সেবা",
+                    sub_service_name="উন্নত ঘাস চাষ ও সাইলেজ অনুদান",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_selina.full_name,
+                    applicant_phone=u_selina.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Rocket",
+                    transaction_id="RK2291048B",
+                    payment_amount=250.0,
+                    payment_status="Verified",
+                    payment_sender_account="01799001122",
+                    remarks="নেপিয়ার ও জাম্বো ঘাসের কাটিং এবং সাইলেজ ড্রাম হস্তান্তর"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1016",
+                    user_id=u_razzak.id,
+                    service_type="মৃত্তিকা সম্পদ",
+                    sub_service_name="মাটির স্বাস্থ্য পরীক্ষা ও সার সুপারিশ কার্ড",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_razzak.full_name,
+                    applicant_phone=u_razzak.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method=None,
+                    transaction_id=None,
+                    payment_amount=50.0,
+                    payment_status="Pending",
+                    remarks="ল্যাবরেটরিতে মাটির পিএইচ ও পুষ্টি উপাদান টেস্ট প্রক্রিয়াধীন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1017",
+                    user_id=u_anwar.id,
+                    service_type="কৃষি সম্প্রসারণ",
+                    sub_service_name="ফলদ বাগান ও চারা বিতরণ সহায়তা",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_anwar.full_name,
+                    applicant_phone=u_anwar.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK3381920C",
+                    payment_amount=200.0,
+                    payment_status="Verified",
+                    payment_sender_account="01777889900",
+                    remarks="মাল্টা ও পেয়ারা চারার কোয়ালিটি সার্টিফিকেট যাচাই চলছে"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1018",
+                    user_id=u_faruk.id,
+                    service_type="কৃষি মেকানাইজেশন",
+                    sub_service_name="পাওয়ার থ্রেশার ও রিপার মেকানাইজেশন",
+                    status=ApplicationStatus.REJECTED,
+                    applicant_name=u_faruk.full_name,
+                    applicant_phone=u_faruk.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Bank",
+                    transaction_id="CHALAN-2026-RJ-401",
+                    payment_amount=500.0,
+                    payment_status="Failed",
+                    payment_sender_account="অগ্রণী ব্যাংক - শেরপুর শাখা",
+                    remarks="আবেদনকারী কৃষক দলের নূন্যতম সদস্য সংখ্যা শর্ত পূরণ না করায় বাতিল"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1019",
+                    user_id=u_amir.id,
+                    service_type="ক্ষুদ্র কৃষি শিল্প",
+                    sub_service_name="মৌমাছি পালন ও মধু প্রক্রিয়াজাতকরণ অনুদান",
+                    status=ApplicationStatus.APPROVED,
+                    applicant_name=u_amir.full_name,
+                    applicant_phone=u_amir.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Nagad",
+                    transaction_id="NG4410293D",
+                    payment_amount=300.0,
+                    payment_status="Verified",
+                    payment_sender_account="01766778899",
+                    remarks="সরিষা মৌসুমে ১০টি আধুনিক এপিস মেলিফেরা মৌ-বাক্স বিতরণ সম্পন্ন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1020",
+                    user_id=u_shafiq.id,
+                    service_type="উদ্ভাবনী কৃষি",
+                    sub_service_name="ভাসমান সবজি চাষ ও হাইড্রোপনিক্স সহায়তা",
+                    status=ApplicationStatus.PENDING,
+                    applicant_name=u_shafiq.full_name,
+                    applicant_phone=u_shafiq.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="bKash",
+                    transaction_id="BK1102938E",
+                    payment_amount=450.0,
+                    payment_status="Submitted",
+                    payment_sender_account="01722334455",
+                    remarks="জলাভূমিতে ভাসমান বেড তৈরির অনুদান প্রকল্প"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1021",
+                    user_id=u_rahima.id,
+                    service_type="কুটির শিল্প ও কৃষি",
+                    sub_service_name="রেশম গুটি পোকা চাষ ও মালবেরি বাগান",
+                    status=ApplicationStatus.IN_PROGRESS,
+                    applicant_name=u_rahima.full_name,
+                    applicant_phone=u_rahima.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Rocket",
+                    transaction_id="RK8839201F",
+                    payment_amount=350.0,
+                    payment_status="Verified",
+                    payment_sender_account="01711223344",
+                    remarks="রেশম বোর্ডের টেকনিক্যাল অফিসারের অনুমোদন প্রক্রিয়াধীন"
+                ),
+                ServiceApplication(
+                    application_number="APP-2026-1022",
+                    user_id=u_main.id,
+                    service_type="কৃষি বাণিজ্য",
+                    sub_service_name="ক্ষুদ্র কৃষি প্রক্রিয়াজাতকরণ প্যাকেজিং",
+                    status=ApplicationStatus.REJECTED,
+                    applicant_name=u_main.full_name,
+                    applicant_phone=u_main.phone_number,
+                    assigned_officer_id=officer.id if officer else None,
+                    payment_method="Bank",
+                    transaction_id="CHALAN-2026-KH-502",
+                    payment_amount=600.0,
+                    payment_status="Failed",
+                    payment_sender_account="জনতা ব্যাংক - ধামরাই শাখা",
+                    remarks="চালান ভাউচার নম্বরে গরমিল থাকায় পেমেন্ট বাতিল"
+                )
+            ]
+        for app in demo_apps:
+            existing = db.query(ServiceApplication).filter(ServiceApplication.application_number == app.application_number).first()
+            if not existing:
+                db.add(app)
+            else:
+                existing.service_type = app.service_type
+                existing.sub_service_name = app.sub_service_name
+                existing.status = app.status
+                existing.applicant_name = app.applicant_name
+                existing.applicant_phone = app.applicant_phone
+                existing.assigned_officer_id = app.assigned_officer_id
+                existing.payment_method = app.payment_method
+                existing.transaction_id = app.transaction_id
+                existing.payment_amount = app.payment_amount
+                existing.payment_status = app.payment_status
+                existing.payment_sender_account = app.payment_sender_account
+                existing.remarks = app.remarks
+        db.commit()
+
+        # Seed 10 Realistic Demo Citizen Complaints (Idempotent by complaint_number)
+        demo_complaints = [
+            CitizenComplaint(
+                complaint_number="CMP-2026-5001",
+                user_id=u_main.id,
+                category="কৃষি সার সংকট",
+                description="স্থানীয় বিসিআইসি ডিলার পয়েন্টে ডিএপি এবং পটাশ সারের সরকার নির্ধারিত মূল্যের চেয়ে বস্তাপ্রতি ২০০ টাকা বেশি রাখা হচ্ছে এবং স্লিপ দেওয়া হচ্ছে না।",
+                status=ComplaintStatus.PENDING,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes=None
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5002",
+                user_id=u_shafiq.id,
+                category="সেচ ও বিদ্যুৎ সমস্যা",
+                description="ধামরাই ব্লকে বিদ্যুৎ সংযোগে প্রচণ্ড লো-ভোল্টেজের কারণে গভীর নলকূপ সেচ পাম্প চলতে পারছে না, ফলে চারা ধান শুকিয়ে যাচ্ছে।",
+                status=ComplaintStatus.UNDER_INVESTIGATION,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="পল্লী বিদ্যুৎ জোনাল অফিসের সাথে যোগাযোগ করা হয়েছে, ট্রান্সফরমার ফেজ চেক করা হচ্ছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5003",
+                user_id=u_rahima.id,
+                category="ইউনিয়ন পরিষদ ড্রেনেজ",
+                description="পশ্চিম তেলিহাটি এলাকায় বর্ষায় পানি নিষ্কাশন ড্রেনের মুখ বন্ধ থাকায় আশেপাশের সবজি ক্ষেত প্লাবিত হচ্ছে।",
+                status=ComplaintStatus.RESOLVED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="ইউপি মেম্বার ও এলাকাবাসীর সহায়তায় ড্রেনের বর্জ্য পরিষ্কার করে পানির প্রবাহ স্বাভাবিক করা হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5004",
+                user_id=u_razzak.id,
+                category="ভেজাল বীজ ও বালাইনাশক",
+                description="বাজারের দোকান থেকে কেনা হাইব্রিড বেগুনের বীজে কোন চারা গজায়নি। দোকানদার কোনো ক্ষতিপূরণ দিতে অস্বীকৃতি জানিয়েছে।",
+                status=ComplaintStatus.UNDER_INVESTIGATION,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="দোকানের বীজের ব্যাচ নম্বর সংগ্রহ করে উপজেলা কৃষি কর্মকর্তার অধীনে ল্যাব টেস্টের জন্য পাঠানো হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5005",
+                user_id=u_jasim.id,
+                category="রাস্তাঘাট ও ব্রিজ সংস্কার",
+                description="কৃষি পণ্য বাজারে নেওয়ার সংযোগ কাঁচা রাস্তা ভেঙে যাওয়ায় ট্রাক বা ভ্যান ঢুকতে পারছে না, ফসল মাঠেই নষ্ট হচ্ছে।",
+                status=ComplaintStatus.PENDING,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes=None
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5006",
+                user_id=u_sohel.id,
+                category="পল্লী বিদ্যুৎ ট্রান্সফরমার বিকল",
+                description="বিগত ৪ দিন ধরে কৃষি সেচ লাইনের ট্রান্সফরমার নষ্ট হয়ে আছে, দ্রুত জরুরি মেরামতের আবেদন।",
+                status=ComplaintStatus.RESOLVED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="পল্লী বিদ্যুৎ সমিতির কারিগরি টিম নতুন ট্রান্সফরমার প্রতিস্থাপন করে বিদ্যুৎ সংযোগ চালু করেছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5007",
+                user_id=u_amir.id,
+                category="সরকারি প্রণোদনা বিতরণ অনিয়ম",
+                description="ক্ষুদ্র কৃষক তালিকায় প্রকৃত ক্ষতিগ্রস্ত কৃষকদের বাদ দিয়ে ব্যক্তিগত পছন্দের লোকদের নাম অন্তর্ভুক্ত করার অভিযোগ।",
+                status=ComplaintStatus.REJECTED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="তদন্তে দেখা গেছে তালিকাভুক্ত সকল কৃষকই ইউনিয়ন কৃষি কমিটির যাচাইকৃত কার্ডধারী কৃষক।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5008",
+                user_id=u_anwar.id,
+                category="খাল খনন ও পানি প্রবাহ বন্ধ",
+                description="স্থানীয় প্রভাবশালীদের দ্বারা সেচ খালের মুখ বন্ধ করে মাছের ঘের তৈরি করায় কৃষি জমিতে পানি সরবরাহ ব্যাহত হচ্ছে।",
+                status=ComplaintStatus.UNDER_INVESTIGATION,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="সহকারী কমিশনার (ভূমি) এর উপস্থিতিতে যৌথ পরিদর্শন কমিটি গঠন করা হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5009",
+                user_id=u_selina.id,
+                category="পশু চিকিৎসা ও ভ্যাকসিন সংকট",
+                description="উপজেলা প্রাণিসম্পদ হাসপাতালে গরুর লাম্পি স্কিন ডিজিজ (LSD) ভ্যাকসিন পাওয়া যাচ্ছে না, খামারীরা চরম দুশ্চিন্তায়।",
+                status=ComplaintStatus.RESOLVED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="জেলা প্রাণিসম্পদ দপ্তর থেকে অতিরিক্ত ৫০০ ডোজ ভ্যাকসিন সরবরাহ নিশ্চিত করা হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5010",
+                user_id=u_faruk.id,
+                category="হাট-বাজার ইজারা টোল বৃদ্ধি",
+                description="ধামরাই পাইকারি বাজারে কৃষকদের কাছ থেকে সবজি বিক্রির জন্য ইজারাদারের কর্মচারীরা অতিরিক্ত অবৈধ খাজনা আদায় করছে।",
+                status=ComplaintStatus.PENDING,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes=None
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5011",
+                user_id=u_shafiq.id,
+                category="মৎস্য ঘের ও বিষাক্ত বর্জ্য",
+                description="স্থানীয় কারখানা থেকে নির্গত অপরিশোধিত তরল বর্জ্য খালের পানিতে ফেলায় ঘেরের রুই ও কাতলা মাছ মারা যাচ্ছে।",
+                status=ComplaintStatus.RESOLVED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="পরিবেশ অধিদপ্তর ও উপজেলা নির্বাহী কর্মকর্তার হস্তক্ষেপে কারখানার বর্জ্য ড্রেন সিলগালা ও ক্ষতিপূরণ প্রদান করা হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5012",
+                user_id=u_rahima.id,
+                category="কৃষি যন্ত্রপাতি মেরামত বিলম্ব",
+                description="উপজেলা কৃষি ওয়ার্কশপে কম্বাইন হারভেস্টার মেরামত সার্ভিস ১ মাস ধরে বন্ধ থাকায় বোরো ধান কাটাতে বিলম্ব হচ্ছে।",
+                status=ComplaintStatus.UNDER_INVESTIGATION,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="ঢাকা কেন্দ্রীয় কৃষি প্রকৌশল বিভাগ থেকে অতিরিক্ত মেকানিক ও খুচরা যন্ত্রাংশ পাঠানো হয়েছে।"
+            ),
+            CitizenComplaint(
+                complaint_number="CMP-2026-5013",
+                user_id=u_jasim.id,
+                category="সেচ নর্দমা সংস্কার ও ভরাট",
+                description="প্রধান সেচ ক্যানেলে পলি জমে গভীরতা কমে যাওয়ায় শেষ প্রান্তের কৃষকরা বোরো ধানে পানি পাচ্ছেন না।",
+                status=ComplaintStatus.RESOLVED,
+                assigned_officer_id=officer.id if officer else None,
+                resolution_notes="বিএমডিএ এর অর্থায়নে ক্যানেলের পলি অপসারণ ও জরুরি খনন কাজ সম্পন্ন করা হয়েছে।"
             )
-            db.add(app_rec)
-            db.commit()
+        ]
+
+        for comp in demo_complaints:
+            existing_c = db.query(CitizenComplaint).filter(CitizenComplaint.complaint_number == comp.complaint_number).first()
+            if not existing_c:
+                db.add(comp)
+            else:
+                existing_c.category = comp.category
+                existing_c.description = comp.description
+                existing_c.status = comp.status
+                existing_c.assigned_officer_id = comp.assigned_officer_id
+                existing_c.resolution_notes = comp.resolution_notes
+        db.commit()
 
     finally:
-        if close_db:
+        if should_close or close_db:
             db.close()

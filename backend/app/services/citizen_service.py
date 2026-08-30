@@ -141,6 +141,28 @@ class CitizenService:
         officer = db.query(User).filter(User.role == UserRole.OFFICER).first()
         officer_id = officer.id if officer else None
 
+        service_info = self.get_service_by_id(req.service_type)
+        fee_bdt = service_info.fee_bdt if service_info else 0.0
+
+        pay_method = req.payment_method.strip().lower() if req.payment_method else ("free" if fee_bdt == 0 else None)
+        tx_id = req.transaction_id.strip() if req.transaction_id else None
+
+        if pay_method in ("bkash", "nagad", "rocket", "bank") and not tx_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="নির্বাচিত পেমেন্ট মাধ্যমের জন্য ট্রানজেকশন আইডি প্রদান করা আবশ্যক (Transaction ID is required)."
+            )
+
+        if tx_id:
+            pay_status = "Submitted"
+            pay_time = datetime.now(timezone.utc)
+        elif fee_bdt == 0:
+            pay_status = "Free / N/A"
+            pay_time = None
+        else:
+            pay_status = "Pending"
+            pay_time = None
+
         new_app = ServiceApplication(
             application_number=app_num,
             user_id=user.id,
@@ -151,7 +173,13 @@ class CitizenService:
             applicant_phone=req.applicant_phone or user.phone_number,
             remarks=req.remarks or "নতুন আবেদন জমা হয়েছে",
             attached_documents=req.attached_documents,
-            assigned_officer_id=officer_id
+            assigned_officer_id=officer_id,
+            payment_method=req.payment_method,
+            transaction_id=tx_id,
+            payment_amount=fee_bdt,
+            payment_status=pay_status,
+            payment_sender_account=req.payment_sender_account.strip() if req.payment_sender_account else None,
+            payment_submitted_at=pay_time
         )
         db.add(new_app)
         db.commit()
@@ -163,7 +191,7 @@ class CitizenService:
             old_status=None,
             new_status=ApplicationStatus.PENDING.value,
             performed_by=user.full_name,
-            remarks="আবেদনকারী কর্তৃক অনলাইনে দাখিল করা হয়েছে"
+            remarks="আবেদনকারী কর্তৃক অনলাইনে দাখিল করা হয়েছে" + (f" (লেনদেন আইডি: {tx_id})" if tx_id else "")
         )
         db.add(initial_audit)
         
@@ -283,6 +311,12 @@ class CitizenService:
             attached_documents=app_rec.attached_documents,
             assigned_officer_id=app_rec.assigned_officer_id,
             assigned_officer_name=officer_name,
+            payment_method=app_rec.payment_method,
+            transaction_id=app_rec.transaction_id,
+            payment_amount=app_rec.payment_amount if app_rec.payment_amount is not None else 0.0,
+            payment_status=app_rec.payment_status or "Pending",
+            payment_sender_account=app_rec.payment_sender_account,
+            payment_submitted_at=app_rec.payment_submitted_at,
             created_at=app_rec.created_at,
             updated_at=app_rec.updated_at,
             history=history_dtos

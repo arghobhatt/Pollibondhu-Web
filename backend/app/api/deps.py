@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -40,6 +40,21 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
             detail="Inactive user account."
         )
     return current_user
+
+def get_optional_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+    if not token:
+        return None
+    payload = decode_access_token(token)
+    if not payload or "sub" not in payload:
+        return None
+    try:
+        user_id = int(payload["sub"])
+        user = user_repository.get_by_id(db, user_id)
+        if user and user.is_active:
+            return user
+    except Exception:
+        pass
+    return None
 
 class RoleChecker:
     def __init__(self, allowed_roles: List[str]):

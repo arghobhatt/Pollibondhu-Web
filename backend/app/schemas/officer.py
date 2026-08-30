@@ -10,5 +10,6 @@ class OfficerStatsDTO(BaseModel):
     resolved_complaints_count: int
 
 class ApplicationStatusUpdateDTO(BaseModel):
-    status: str = Field(..., description="New status: 'under_review', 'approved', 'rejected'")
+    status: str = Field(..., description="New status: 'under_review', 'approved', 'rejected', 'Pending', 'In Progress', 'Approved', 'Rejected'")
     remarks: Optional[str] = Field(None, description="Officer notes/remarks")
+    payment_status: Optional[str] = Field(None, description="Optional payment status update: 'Pending', 'Submitted', 'Verified', 'Failed/Rejected'")

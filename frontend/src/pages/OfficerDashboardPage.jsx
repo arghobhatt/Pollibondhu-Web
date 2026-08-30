@@ -25,6 +25,7 @@ export default function OfficerDashboardPage() {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   
   const [newStatus, setNewStatus] = useState('Approved');
+  const [paymentStatus, setPaymentStatus] = useState('Verified');
   const [officerRemarks, setOfficerRemarks] = useState('');
   const [updateError, setUpdateError] = useState('');
   const [loadingSubmit, setLoadingSubmit] = useState(false);
@@ -82,7 +83,8 @@ export default function OfficerDashboardPage() {
         },
         body: JSON.stringify({
           status: newStatus,
-          remarks: officerRemarks
+          remarks: officerRemarks,
+          payment_status: paymentStatus
         })
       });
       if (res.ok) {
@@ -136,7 +138,7 @@ export default function OfficerDashboardPage() {
   if (!authToken) {
     return (
       <EmptyState
-        icon={ShieldAlert}
+        icon={ShieldCheck}
         title="দায়িত্বপ্রাপ্ত কর্মকর্তা ড্যাশবোর্ড"
         description="কর্মকর্তা ড্যাশবোর্ডে প্রবেশের জন্য প্রথমে সরকারি কর্মকর্তা একাউন্টে সাইন-ইন করুন।"
         actionLabel="কর্মকর্তা সাইন-ইন করুন"
@@ -217,13 +219,27 @@ export default function OfficerDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <DataTable headers={["আবেদন নম্বর", "আবেদনকারী", "মোবাইল", "সেবা বিষয়", "বর্তমান অবস্থা", "তারিখ", "কার্যক্রম"]}>
+            <DataTable headers={["আবেদন নম্বর", "আবেদনকারী", "মোবাইল", "সেবা বিষয়", "পেমেন্ট ও Trx ID", "বর্তমান অবস্থা", "তারিখ", "কার্যক্রম"]}>
               {applications.map((app) => (
                 <DataTableRow key={app.id}>
                   <DataTableCell className="font-mono font-bold text-slate-900">{app.application_number}</DataTableCell>
                   <DataTableCell className="font-semibold">{app.applicant_name}</DataTableCell>
                   <DataTableCell>{app.applicant_phone}</DataTableCell>
                   <DataTableCell>{app.sub_service_name}</DataTableCell>
+                  <DataTableCell>
+                    {app.transaction_id ? (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200">
+                          {app.payment_method}: {app.transaction_id}
+                        </span>
+                        <div className="text-[10px] text-slate-500 font-medium">
+                          {app.payment_status === 'Verified' ? '✓ যাচাইকৃত' : '⏳ দাখিলকৃত'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">ফি নাই</span>
+                    )}
+                  </DataTableCell>
                   <DataTableCell><StatusBadge status={app.status} /></DataTableCell>
                   <DataTableCell className="text-slate-500 text-[11px]">{formatDate(app.created_at)}</DataTableCell>
                   <DataTableCell>
@@ -232,11 +248,12 @@ export default function OfficerDashboardPage() {
                       onClick={() => {
                         setSelectedApp(app);
                         setNewStatus(app.status);
+                        setPaymentStatus(app.payment_status || (app.transaction_id ? 'Verified' : 'Unverified'));
                         setOfficerRemarks(app.remarks || '');
                       }}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
                     >
-                      অ্যাকশন / আপডেট
+                      অ্যাকশন / রিভিউ
                     </button>
                   </DataTableCell>
                 </DataTableRow>
@@ -303,10 +320,33 @@ export default function OfficerDashboardPage() {
         subtitle={`আবেদনকারী: ${selectedApp?.applicant_name || ''}`}
       >
         {selectedApp && (
-          <form onSubmit={handleAppStatusUpdate} className="space-y-4">
+          <form onSubmit={handleAppStatusUpdate} className="space-y-4 text-xs">
             {updateError && <p className="text-xs font-semibold text-rose-600">{updateError}</p>}
 
-            <FormField label="আবেদন সিদ্ধান্ত">
+            {/* Payment verification details */}
+            {selectedApp.transaction_id ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1.5">
+                <p className="font-bold text-emerald-900">নাগরিক পেমেন্ট তথ্য:</p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                  <p>মাধ্যম: <strong>{selectedApp.payment_method}</strong></p>
+                  <p>টাকার পরিমাণ: <strong>{selectedApp.payment_amount || 0} ৳</strong></p>
+                  <p className="col-span-2">লেনদেন আইডি: <strong className="font-mono text-slate-900 bg-white px-2 py-0.5 rounded border select-all">{selectedApp.transaction_id}</strong></p>
+                  {selectedApp.payment_sender_account && (
+                    <p className="col-span-2">প্রেরক একাউন্ট: <strong>{selectedApp.payment_sender_account}</strong></p>
+                  )}
+                </div>
+
+                <FormField label="পেমেন্ট যাচাই অবস্থা (Payment Verification Status)">
+                  <Select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+                    <option value="Verified">যাচাইকৃত ও গৃহীত (Verified)</option>
+                    <option value="Submitted">দাখিলকৃত ও প্রক্রিয়ারত (Submitted)</option>
+                    <option value="Unverified">ত্রুটিযুক্ত / অযাচাইকৃত (Unverified)</option>
+                  </Select>
+                </FormField>
+              </div>
+            ) : null}
+
+            <FormField label="আবেদন চূড়ান্ত সিদ্ধান্ত">
               <Select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
                 <option value="Approved">অনুমোদিত (Approved)</option>
                 <option value="In Progress">প্রক্রিয়াধীন (In Progress)</option>
@@ -328,7 +368,7 @@ export default function OfficerDashboardPage() {
               disabled={loadingSubmit}
               className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
             >
-              সিদ্ধান্ত সংরক্ষণ করুন
+              {loadingSubmit ? 'সংরক্ষণ হচ্ছে...' : 'সিদ্ধান্ত ও পেমেন্ট অবস্থা সংরক্ষণ করুন'}
             </button>
           </form>
         )}

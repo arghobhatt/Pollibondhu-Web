@@ -27,6 +27,9 @@ class ServiceApplicationCreateDTO(BaseModel):
     applicant_phone: str = Field(..., min_length=11)
     remarks: Optional[str] = None
     attached_documents: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_id: Optional[str] = None
+    payment_sender_account: Optional[str] = None
 
 class AuditLogItemDTO(BaseModel):
     id: int
@@ -53,6 +56,12 @@ class ServiceApplicationResponseDTO(BaseModel):
     attached_documents: Optional[str] = None
     assigned_officer_id: Optional[int] = None
     assigned_officer_name: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_id: Optional[str] = None
+    payment_amount: float = 0.0
+    payment_status: Optional[str] = "Pending"
+    payment_sender_account: Optional[str] = None
+    payment_submitted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     history: List[AuditLogItemDTO] = []

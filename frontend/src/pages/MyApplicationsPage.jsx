@@ -61,17 +61,33 @@ export default function MyApplicationsPage() {
           description="আপনি এখনও কোন সেবার জন্য অনলাইন আবেদন করেননি।"
         />
       ) : (
-        <DataTable headers={["আবেদন আইডি", "সেবার নাম", "আবেদনকারী", "সংযুক্ত কাগজপত্র", "স্ট্যাটাস", "দায়িত্বপ্রাপ্ত কর্মকর্তা", "তারিখ"]}>
+        <DataTable headers={["আবেদন আইডি", "সেবার নাম", "আবেদনকারী", "পেমেন্ট ও লেনদেন আইডি", "সংযুক্ত কাগজপত্র", "স্ট্যাটাস", "দায়িত্বপ্রাপ্ত কর্মকর্তা", "তারিখ"]}>
           {applications.map((app) => (
             <DataTableRow key={app.id}>
               <DataTableCell className="font-mono font-bold text-slate-900">{app.application_number}</DataTableCell>
               <DataTableCell className="font-semibold text-slate-900">{app.sub_service_name}</DataTableCell>
               <DataTableCell>{app.applicant_name} ({app.applicant_phone})</DataTableCell>
               <DataTableCell>
+                {app.transaction_id ? (
+                  <div className="space-y-0.5">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                      <span>{app.payment_method || 'MFS'}: {app.transaction_id}</span>
+                    </span>
+                    <div className="text-[10px] text-slate-500">
+                      অবস্থা: <strong className={app.payment_status === 'Verified' ? 'text-emerald-700' : 'text-amber-600'}>
+                        {app.payment_status === 'Verified' ? 'যাচাইকৃত (Verified)' : 'দাখিলকৃত (Submitted)'}
+                      </strong>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-slate-400">ফি প্রযোজ্য নয় / ফ্রী</span>
+                )}
+              </DataTableCell>
+              <DataTableCell>
                 {app.attached_documents ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    <Paperclip className="w-3 h-3" />
-                    <span>{app.attached_documents}</span>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 truncate max-w-[140px]">
+                    <Paperclip className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{app.attached_documents}</span>
                   </span>
                 ) : (
                   <span className="text-[11px] text-slate-400">নাই</span>

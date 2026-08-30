@@ -64,8 +64,20 @@ class ComplaintService:
 
     def get_all_complaints(self, db: Session, status_filter: Optional[str] = None) -> List[ComplaintResponseDTO]:
         query = db.query(CitizenComplaint)
-        if status_filter and status_filter.strip() and status_filter.strip() != "all":
-            query = query.filter(CitizenComplaint.status == status_filter.strip())
+        if status_filter and status_filter.strip() and status_filter.strip().lower() != "all":
+            sf = status_filter.strip()
+            comp_map = {
+                "pending": ComplaintStatus.PENDING,
+                "under_investigation": ComplaintStatus.UNDER_INVESTIGATION,
+                "resolved": ComplaintStatus.RESOLVED,
+                "rejected": ComplaintStatus.REJECTED,
+                "Pending": ComplaintStatus.PENDING,
+                "Under Investigation": ComplaintStatus.UNDER_INVESTIGATION,
+                "Resolved": ComplaintStatus.RESOLVED,
+                "Rejected": ComplaintStatus.REJECTED,
+            }
+            target = comp_map.get(sf, sf)
+            query = query.filter(CitizenComplaint.status == target)
         cmps = query.order_by(CitizenComplaint.created_at.desc()).all()
         return [self._build_complaint_dto(db, c) for c in cmps]
 

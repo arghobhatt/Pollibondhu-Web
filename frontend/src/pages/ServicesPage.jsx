@@ -22,6 +22,10 @@ export default function ServicesPage() {
   const [applyRemarks, setApplyRemarks] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [fileError, setFileError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('bKash');
+  const [transactionId, setTransactionId] = useState('');
+  const [senderAccount, setSenderAccount] = useState('');
+  const [paymentError, setPaymentError] = useState('');
 
   const [applySuccessMsg, setApplySuccessMsg] = useState('');
   const [loadingSubmit, setLoadingSubmit] = useState(false);
@@ -55,6 +59,7 @@ export default function ServicesPage() {
     if (currentUser) {
       setApplicantName(currentUser.full_name || '');
       setApplicantPhone(currentUser.phone_number || '');
+      setSenderAccount(currentUser.phone_number || '');
     }
   }, [currentUser]);
 
@@ -105,6 +110,14 @@ export default function ServicesPage() {
       openAuthModal('login');
       return;
     }
+    setPaymentError('');
+
+    const requiresPaymentTrx = (selectedService?.fee_bdt > 0 || ['bKash', 'Nagad', 'Rocket', 'Bank'].includes(paymentMethod)) && paymentMethod !== 'Cash';
+    if (requiresPaymentTrx && !transactionId.trim()) {
+      setPaymentError('অনুগ্রহ করে আপনার পেমেন্টের লেনদেন আইডি / Transaction ID প্রদান করুন।');
+      return;
+    }
+
     setLoadingSubmit(true);
     try {
       const docSummary = attachedFiles.map(f => `${f.name} (${f.size})`).join(', ');
@@ -120,7 +133,11 @@ export default function ServicesPage() {
           applicant_name: applicantName,
           applicant_phone: applicantPhone,
           remarks: applyRemarks,
-          attached_documents: docSummary || null
+          attached_documents: docSummary || null,
+          payment_method: paymentMethod,
+          transaction_id: transactionId.trim() || null,
+          payment_sender_account: senderAccount.trim() || null,
+          payment_amount: selectedService?.fee_bdt || 0.0
         })
       });
       const data = await res.json();
@@ -132,10 +149,15 @@ export default function ServicesPage() {
           setSelectedService(null);
           setApplyRemarks('');
           setAttachedFiles([]);
+          setTransactionId('');
+          setPaymentError('');
           setApplyStep(1);
-        }, 1800);
+        }, 2000);
+      } else {
+        setPaymentError(data.detail || data.error?.message || 'আবেদন দাখিল সম্পন্ন করা যায়নি।');
       }
     } catch (e) {
+      setPaymentError('সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।');
     } finally {
       setLoadingSubmit(false);
     }
@@ -180,6 +202,8 @@ export default function ServicesPage() {
                       setSelectedService(sub);
                       setApplyStep(1);
                       setAttachedFiles([]);
+                      setTransactionId('');
+                      setPaymentError('');
                       setIsApplyModalOpen(true);
                     }}
                   />
@@ -206,8 +230,8 @@ export default function ServicesPage() {
             <div className="flex border-b border-slate-200 pb-3 justify-between text-[11px] font-semibold text-slate-500">
               <span className={applyStep === 1 ? "text-emerald-700 font-bold" : ""}>১. ব্যক্তিগত তথ্য</span>
               <span className={applyStep === 2 ? "text-emerald-700 font-bold" : ""}>২. সেবা বিবরণ</span>
-              <span className={applyStep === 3 ? "text-emerald-700 font-bold" : ""}>৩. কাগজপত্র সংযুক্ত</span>
-              <span className={applyStep === 4 ? "text-emerald-700 font-bold" : ""}>৪. রিভিউ ও দাখিল</span>
+              <span className={applyStep === 3 ? "text-emerald-700 font-bold" : ""}>৩. কাগজপত্র</span>
+              <span className={applyStep === 4 ? "text-emerald-700 font-bold" : ""}>৪. পেমেন্ট ও দাখিল</span>
             </div>
 
             {applyStep === 1 && (
@@ -323,7 +347,7 @@ export default function ServicesPage() {
                     onClick={() => setApplyStep(4)}
                     className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs shadow-sm flex items-center justify-center gap-1"
                   >
-                    <span>রিভিউ ধাপ</span>
+                    <span>পেমেন্ট ও রিভিউ</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -332,13 +356,120 @@ export default function ServicesPage() {
 
             {applyStep === 4 && (
               <form onSubmit={handleApplySubmit} className="space-y-4">
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
-                  <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1">আবেদন তথ্য রিভিউ:</h4>
-                  <p>আবেদনকারী: <strong className="text-slate-900">{applicantName}</strong></p>
-                  <p>মোবাইল: <strong className="text-slate-900">{applicantPhone}</strong></p>
-                  <p>সেবা: <strong className="text-slate-900">{selectedService?.name_bn}</strong></p>
-                  <p>সংযুক্ত কাগজপত্র: {attachedFiles.length > 0 ? attachedFiles.map(f => f.name).join(', ') : 'কোন নথিপত্র সংযুক্ত নেই'}</p>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5">
+                  <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-1 flex justify-between">
+                    <span>আবেদন তথ্য সারাংশ:</span>
+                    <span className="text-emerald-700 font-semibold">ফি: {selectedService?.fee_bdt > 0 ? `${selectedService.fee_bdt} ৳` : 'বিনামূল্যে (০ ৳)'}</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-1 text-[11px]">
+                    <p>আবেদনকারী: <strong className="text-slate-900">{applicantName}</strong></p>
+                    <p>মোবাইল: <strong className="text-slate-900">{applicantPhone}</strong></p>
+                  </div>
+                  <p className="text-[11px]">সেবা: <strong className="text-slate-900">{selectedService?.name_bn}</strong></p>
+                  {attachedFiles.length > 0 && (
+                    <p className="text-[11px] text-slate-500">সংযুক্ত নথি: {attachedFiles.map(f => f.name).join(', ')}</p>
+                  )}
                 </div>
+
+                {/* Payment Selection Block */}
+                <div className="space-y-3 p-3 bg-emerald-50/40 border border-emerald-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-800 flex items-center gap-1">
+                      <span>পরিশোধের মাধ্যম (Payment Method):</span>
+                    </label>
+                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      {selectedService?.fee_bdt > 0 ? `সরকারি ফি: ${selectedService.fee_bdt} ৳` : 'প্রযোজ্য ক্ষেত্রে ফি'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'bKash', label: 'বিকাশ (bKash)', color: 'border-pink-300 hover:border-pink-500' },
+                      { id: 'Nagad', label: 'নগদ (Nagad)', color: 'border-orange-300 hover:border-orange-500' },
+                      { id: 'Rocket', label: 'রকেট (Rocket)', color: 'border-purple-300 hover:border-purple-500' },
+                      { id: 'Bank', label: 'ব্যাংক / চালান', color: 'border-blue-300 hover:border-blue-500' }
+                    ].map((pm) => (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => { setPaymentMethod(pm.id); setPaymentError(''); }}
+                        className={`py-2 px-1 text-center rounded-lg border font-medium text-[11px] transition-all ${
+                          paymentMethod === pm.id
+                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-200'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pm.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {paymentMethod === 'bKash' && (
+                    <div className="p-2.5 bg-pink-50/70 border border-pink-200 rounded-lg text-[11px] text-pink-900 space-y-1">
+                      <p className="font-semibold">বিকাশ পেমেন্ট নির্দেশিকা:</p>
+                      <p>১. বিকাশ অ্যাপে 'Make Payment' বা 'Send Money' করুন: <strong className="select-all">01800000000</strong> নম্বরে।</p>
+                      <p>২. পেমেন্ট সম্পন্ন হলে ফিরতি SMS থেকে Transaction ID টি নিচে লিখুন।</p>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Nagad' && (
+                    <div className="p-2.5 bg-orange-50/70 border border-orange-200 rounded-lg text-[11px] text-orange-900 space-y-1">
+                      <p className="font-semibold">নগদ পেমেন্ট নির্দেশিকা:</p>
+                      <p>১. নগদ অ্যাপে 'Merchant Pay' বা 'Send Money' করুন: <strong className="select-all">01800000000</strong> নম্বরে।</p>
+                      <p>২. পেমেন্ট সফল হলে প্রাপ্ত Transaction ID টি নিচে প্রদান করুন।</p>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Rocket' && (
+                    <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-lg text-[11px] text-purple-900 space-y-1">
+                      <p className="font-semibold">রকেট পেমেন্ট নির্দেশিকা:</p>
+                      <p>১. রকেটে বিল পে বা ট্রান্সফার করুন মার্চেন্ট কোড: <strong className="select-all">88018</strong> (বা 01800000000)।</p>
+                      <p>২. ট্রানজেকশন সফল হলে SMS এ প্রাপ্ত Transaction ID লিখুন।</p>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'Bank' && (
+                    <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg text-[11px] text-blue-900 space-y-1">
+                      <p className="font-semibold">ব্যাংক / চালান নির্দেশিকা:</p>
+                      <p>সোনালী ব্যাংক একাউন্ট: <strong className="select-all">0123456789 (উপজেলা হিসাব শাখা)</strong></p>
+                      <p>ব্যাংক ভাউচার বা চালানের রেফারেন্স/লেনদেন নম্বর নিচে প্রবেশ করান।</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <FormField
+                      label={paymentMethod === 'Bank' ? 'প্রেরকের ব্যাংক একাউন্ট / ফোন' : 'প্রেরকের মোবাইল নম্বর'}
+                    >
+                      <Input
+                        value={senderAccount}
+                        onChange={(e) => setSenderAccount(e.target.value)}
+                        placeholder="যেমন: 017XXXXXXXX"
+                      />
+                    </FormField>
+
+                    <FormField
+                      label={paymentMethod === 'Bank' ? 'ব্যাংক রেফারেন্স নম্বর / Transaction ID' : 'লেনদেন আইডি / Transaction ID'}
+                      required={selectedService?.fee_bdt > 0}
+                    >
+                      <Input
+                        value={transactionId}
+                        onChange={(e) => { setTransactionId(e.target.value); setPaymentError(''); }}
+                        placeholder={paymentMethod === 'Bank' ? 'যেমন: TRX-SB-98213' : 'যেমন: BK8923741X বা 9XJ28KLA'}
+                        required={selectedService?.fee_bdt > 0}
+                      />
+                    </FormField>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 italic">
+                    * লেনদেন আইডি দাখিল করার অর্থ পেমেন্ট তথ্য দাখিল করা। সংশ্লিষ্ট দায়িত্বপ্রাপ্ত কর্মকর্তা যাচাইপূর্বক চূড়ান্ত অনুমোদন প্রদান করবেন।
+                  </p>
+                </div>
+
+                {paymentError && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-semibold">
+                    {paymentError}
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <button
@@ -346,7 +477,7 @@ export default function ServicesPage() {
                     onClick={() => setApplyStep(3)}
                     className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg text-xs"
                   >
-                    সম্পাদনা করুন
+                    পূর্ববর্তী ধাপ
                   </button>
                   <button
                     type="submit"
